@@ -7,9 +7,8 @@ using System.Windows.Threading;
 using AMPManager.Core;
 using OpenCvSharp;
 using OpenCvSharp.WpfExtensions;
-using OxyPlot;        // [추가]
-using OxyPlot.Series; // [추가]
-using OxyPlot.Axes;   // [추가]
+using OxyPlot;        // [필수] PlotModel, OxyColor 사용
+using OxyPlot.Series; // [필수] PieSeries, PieSlice 사용
 
 namespace AMPManager.ViewModel
 {
@@ -19,8 +18,9 @@ namespace AMPManager.ViewModel
         private ApiService _apiService = new ApiService();
         private bool _isCameraRunning = false;
 
-        // --- [추가] OxyPlot 그래프 모델 ---
-        public PlotModel MyPlotModel { get; private set; }
+        // --- 원형 그래프 모델 2개 ---
+        public PlotModel WorkPieModel { get; private set; }  // 작업 진행률
+        public PlotModel DefectPieModel { get; private set; } // 불량률
 
         // --- 카메라 객체 ---
         private VideoCapture? _capture1;
@@ -37,107 +37,138 @@ namespace AMPManager.ViewModel
         private int _currentComplete = 0;
         private double _defectRate = 0;
 
-        public int AllocationCount { get => _allocationCount; set => SetProperty(ref _allocationCount, value); }
-        public int CurrentComplete { get => _currentComplete; set => SetProperty(ref _currentComplete, value); }
-        public double DefectRate { get => _defectRate; set => SetProperty(ref _defectRate, value); }
+        public int AllocationPercent => _allocationCount == 0 ? 0 : (int)((double)_currentComplete / _allocationCount * 100);
+
+        public int AllocationCount
+        {
+            get => _allocationCount;
+            set { if (SetProperty(ref _allocationCount, value)) UpdateCharts(); }
+        }
+
+        public int CurrentComplete
+        {
+            get => _currentComplete;
+            set
+            {
+                if (SetProperty(ref _currentComplete, value))
+                {
+                    OnPropertyChanged(nameof(AllocationPercent));
+                    UpdateCharts();
+                }
+            }
+        }
+
+        public double DefectRate
+        {
+            get => _defectRate;
+            set { if (SetProperty(ref _defectRate, value)) UpdateCharts(); }
+        }
 
         public ObservableCollection<string> TimestampList { get; } = new ObservableCollection<string>();
         public ObservableCollection<string> DefectMessageList { get; } = new ObservableCollection<string>();
 
         public HomeViewModel()
         {
-            // 1. 그래프 초기화 (다크 테마 적용)
-            MyPlotModel = CreatePlotModel();
+            // 1. 차트 초기화 (도넛 모양)
+            WorkPieModel = CreateDonutModel();
+            DefectPieModel = CreateDonutModel();
 
-            // 2. 타이머 설정
+            // 2. 초기 데이터 설정
+            UpdateCharts();
+
+            // 3. 타이머 설정
             _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
             _timer.Tick += Timer_Tick;
             InitializeCamerasAsync();
         }
 
-        // [추가] 디자인에 맞춘 그래프 생성 함수
-        private PlotModel CreatePlotModel()
+        // 도넛 차트 기본 설정 함수
+        private PlotModel CreateDonutModel()
         {
-            var model = new PlotModel();
-
-            // 다크 테마 색상 정의
-            var accentColor = OxyColor.Parse("#00C1D4");
-            var textColor = OxyColor.Parse("#E0E0E0");
-            var subtleTextColor = OxyColor.Parse("#B0B0B0");
-            var borderColor = OxyColor.Parse("#4A4A5A");
-            var panelBackground = OxyColor.Parse("#2F2F3D");
-
+            var model = new PlotModel { Title = null };
             model.Background = OxyColors.Transparent;
-            model.TextColor = textColor;
             model.PlotAreaBorderColor = OxyColors.Transparent;
-            model.PlotMargins = new OxyThickness(40, 10, 20, 30); // 여백 조정
 
-            // 차트 시리즈 (영역 채우기 효과)
-            var areaSeries = new AreaSeries
+            var series = new PieSeries
             {
-                Color = accentColor,
-                StrokeThickness = 3,
-                Fill = OxyColor.FromAColor(50, accentColor), // 반투명 채우기
-                MarkerType = MarkerType.Circle,
-                MarkerSize = 4,
-                MarkerFill = panelBackground,
-                MarkerStroke = accentColor,
-                MarkerStrokeThickness = 2
+                StrokeThickness = 0,
+                AngleSpan = 360,
+                StartAngle = -90,
+                    InnerRadius = 0.6, // 도넛 모양 (0.0 ~ 1.0)
+                OutsideLabelFormat = null, // 바깥 라벨 숨김
+                InsideLabelFormat = null,  // 안쪽 라벨 숨김
+                TickHorizontalLength = 0,
+                TickRadialLength = 0
             };
 
-            // 테스트 데이터
-            areaSeries.Points.Add(new DataPoint(0, 10));
-            areaSeries.Points.Add(new DataPoint(1, 40));
-            areaSeries.Points.Add(new DataPoint(2, 35));
-            areaSeries.Points.Add(new DataPoint(3, 70));
-            areaSeries.Points.Add(new DataPoint(4, 50));
-            areaSeries.Points.Add(new DataPoint(5, 80));
-
-            model.Series.Add(areaSeries);
-
-            // X축
-            model.Axes.Add(new LinearAxis
-            {
-                Position = AxisPosition.Bottom,
-                Title = "시간(Time)",
-                TextColor = subtleTextColor,
-                AxislineColor = borderColor,
-                TicklineColor = borderColor,
-                MajorGridlineColor = borderColor,
-                MajorGridlineStyle = LineStyle.Dot
-            });
-
-            // Y축
-            model.Axes.Add(new LinearAxis
-            {
-                Position = AxisPosition.Left,
-                Title = "값(Value)",
-                TextColor = subtleTextColor,
-                AxislineColor = borderColor,
-                TicklineColor = borderColor,
-                MajorGridlineColor = borderColor,
-                MajorGridlineStyle = LineStyle.Dot
-            });
-
+            model.Series.Add(series);
             return model;
+        }
+
+        // 데이터가 변경될 때 차트 갱신
+        private void UpdateCharts()
+        {
+            // 1. 작업 진행률 갱신
+            if (WorkPieModel.Series.Count > 0 && WorkPieModel.Series[0] is PieSeries workSeries)
+            {
+                workSeries.Slices.Clear();
+                double remaining = Math.Max(0, AllocationCount - CurrentComplete);
+
+                // 완료 (민트색)
+                workSeries.Slices.Add(new PieSlice("완료", CurrentComplete) { Fill = OxyColor.Parse("#00C1D4") });
+                // 잔여 (어두운 회색)
+                workSeries.Slices.Add(new PieSlice("잔여", remaining) { Fill = OxyColor.Parse("#404050") });
+
+                WorkPieModel.InvalidatePlot(true);
+            }
+
+            // 2. 불량률 갱신
+            if (DefectPieModel.Series.Count > 0 && DefectPieModel.Series[0] is PieSeries defectSeries)
+            {
+                defectSeries.Slices.Clear();
+
+                // 불량 (빨간색)
+                defectSeries.Slices.Add(new PieSlice("불량", DefectRate) { Fill = OxyColor.Parse("#FF5252") });
+                // 정상 (배경색과 비슷한 어두운 색)
+                defectSeries.Slices.Add(new PieSlice("정상", 100.0 - DefectRate) { Fill = OxyColor.Parse("#2F2F3D") });
+
+                DefectPieModel.InvalidatePlot(true);
+            }
         }
 
         private async void Timer_Tick(object? sender, EventArgs e)
         {
-            // ... (기존 서버 통신 및 캡처 코드 유지 - 생략 없이 그대로 사용) ...
-            // 기존 코드를 그대로 두시면 됩니다.
-            // (여기에 원래 있던 _apiService.GetStatusAsync() 및 캡처 로직 유지)
-
-            // 예시로 짧게 표현하자면:
             var data = await _apiService.GetStatusAsync();
             if (data != null)
             {
                 AllocationCount = data.AllocationCount;
                 CurrentComplete = data.CurrentComplete;
                 DefectRate = data.DefectRate;
-                // 로그 업데이트 등...
+
+                TimestampList.Clear();
+                foreach (var log in data.Logs) TimestampList.Add(log);
             }
-            // 캡처 로직...
+
+            // 캡처 로직
+            try
+            {
+                var window = System.Windows.Application.Current.MainWindow;
+                if (window != null && window.ActualWidth > 0 && window.ActualHeight > 0)
+                {
+                    int w = (int)window.ActualWidth;
+                    int h = (int)window.ActualHeight;
+                    RenderTargetBitmap bmp = new RenderTargetBitmap(w, h, 96, 96, PixelFormats.Pbgra32);
+                    bmp.Render(window);
+                    JpegBitmapEncoder encoder = new JpegBitmapEncoder();
+                    encoder.Frames.Add(BitmapFrame.Create(bmp));
+                    using (System.IO.MemoryStream ms = new System.IO.MemoryStream())
+                    {
+                        encoder.Save(ms);
+                        await _apiService.SendImageAsync(ms.ToArray());
+                    }
+                }
+            }
+            catch { }
         }
 
         public void StartSimulation()
@@ -175,9 +206,6 @@ namespace AMPManager.ViewModel
 
         private async void RunCameraLoop(VideoCapture? capture, Func<ImageSource?> getImage, Action<ImageSource?> updateImage)
         {
-            // ... (기존 카메라 루프 코드 유지) ...
-            // (메모리 최적화 로직 등 기존에 작성된 코드 그대로 사용)
-
             if (capture == null || !capture.IsOpened()) return;
 
             await Task.Run(() =>

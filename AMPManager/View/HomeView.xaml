@@ -40,7 +40,7 @@
         <Grid Grid.Column="1">
             <Grid.RowDefinitions>
                 <RowDefinition Height="*"/>
-                <RowDefinition Height="280"/>
+                <RowDefinition Height="300"/>
             </Grid.RowDefinitions>
 
             <Grid Grid.Row="0">
@@ -52,10 +52,7 @@
                 <Border Grid.Column="0" Style="{StaticResource PanelStyle}" Margin="0,5,5,5">
                     <Grid>
                         <Image Source="{Binding CameraImage1}" Stretch="Uniform"/>
-                        <TextBlock Text="CAM 1 (OFF)" 
-                                   Foreground="{StaticResource SecondaryText}" 
-                                   FontSize="24" FontWeight="SemiBold"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock Text="CAM 1 (OFF)" Foreground="{StaticResource SecondaryText}" FontSize="24" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Visibility" Value="Collapsed"/>
@@ -73,10 +70,7 @@
                 <Border Grid.Column="1" Style="{StaticResource PanelStyle}" Margin="5,5,0,5">
                     <Grid>
                         <Image Source="{Binding CameraImage2}" Stretch="Uniform"/>
-                        <TextBlock Text="CAM 2 (OFF)" 
-                                   Foreground="{StaticResource SecondaryText}" 
-                                   FontSize="24" FontWeight="SemiBold"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock Text="CAM 2 (OFF)" Foreground="{StaticResource SecondaryText}" FontSize="24" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Visibility" Value="Collapsed"/>
@@ -95,51 +89,54 @@
             <Border Grid.Row="1" Style="{StaticResource PanelStyle}">
                 <Grid Margin="15">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="300"/>
+                        <ColumnDefinition Width="1.2*"/>
                         <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="200"/>
                     </Grid.ColumnDefinitions>
 
-                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                        <TextBlock Text="금일 정보 목록 (Time-NOW)" Style="{StaticResource TitleText}" Margin="0,0,0,15"/>
-
-                        <Grid Margin="0,0,0,10">
-                            <TextBlock Text="작업 진행률" Foreground="{StaticResource SecondaryText}" VerticalAlignment="Bottom"/>
-                            <TextBlock Text="{Binding AllocationPercent, StringFormat={}{0}%}" 
-                                       HorizontalAlignment="Right" Foreground="{StaticResource AccentColor}" FontWeight="Bold"/>
-                        </Grid>
-
-                        <ProgressBar Value="{Binding AllocationPercent, Mode=OneWay}" 
-                                     Height="15" 
-                                     Background="#404050" 
-                                     Foreground="{StaticResource AccentColor}" 
-                                     BorderThickness="0"
-                                     Margin="0,0,0,20"/>
-
-                        <Border Background="#3A3A4A" CornerRadius="5" Padding="15">
-                            <StackPanel>
-                                <Grid Margin="0,0,0,10">
-                                    <TextBlock Text="금일 할당량" Foreground="{StaticResource SecondaryText}"/>
-                                    <TextBlock Text="{Binding AllocationCount}" FontWeight="Bold" Foreground="White" HorizontalAlignment="Right"/>
-                                </Grid>
-                                <Grid Margin="0,0,0,10">
-                                    <TextBlock Text="현재 완료" Foreground="{StaticResource SecondaryText}"/>
-                                    <TextBlock Text="{Binding CurrentComplete}" FontWeight="Bold" Foreground="{StaticResource AccentColor}" HorizontalAlignment="Right"/>
-                                </Grid>
-                                <Separator Background="#505060" Margin="0,0,0,10"/>
-                                <Grid>
-                                    <TextBlock Text="불량률" Foreground="{StaticResource SecondaryText}"/>
-                                    <TextBlock Text="{Binding DefectRate, StringFormat={}{0}%}" FontWeight="Bold" Foreground="#FF5252" HorizontalAlignment="Right"/>
-                                </Grid>
+                    <Grid Grid.Column="0" Margin="10">
+                        <TextBlock Text="작업 진행률" Style="{StaticResource TitleText}" HorizontalAlignment="Center" VerticalAlignment="Top"/>
+                        <Grid Margin="0,30,0,0">
+                            <oxy:PlotView Model="{Binding WorkPieModel}" Background="Transparent"/>
+                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False">
+                                <TextBlock Text="{Binding AllocationPercent, StringFormat={}{0}%}" 
+                                           FontSize="36" FontWeight="Bold" Foreground="{StaticResource AccentColor}" 
+                                           HorizontalAlignment="Center"/>
+                                <TextBlock Text="COMPLETED" FontSize="10" Foreground="{StaticResource SecondaryText}" HorizontalAlignment="Center"/>
                             </StackPanel>
-                        </Border>
-                    </StackPanel>
-
-                    <Grid Grid.Column="1" Margin="20,0,0,0">
-                        <TextBlock Text="실시간 검사 수치 변화" Style="{StaticResource TitleText}" VerticalAlignment="Top"/>
-                        <oxy:PlotView Model="{Binding MyPlotModel}" 
-                                      Background="Transparent"
-                                      Margin="0,30,0,0"/>
+                        </Grid>
                     </Grid>
+
+                    <Grid Grid.Column="1" Margin="10">
+                        <TextBlock Text="실시간 불량률" Style="{StaticResource TitleText}" HorizontalAlignment="Center" VerticalAlignment="Top"/>
+                        <Grid Margin="0,30,0,0">
+                            <oxy:PlotView Model="{Binding DefectPieModel}" Background="Transparent"/>
+                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False">
+                                <TextBlock Text="{Binding DefectRate, StringFormat={}{0:F1}%}" 
+                                           FontSize="36" FontWeight="Bold" Foreground="#FF5252" 
+                                           HorizontalAlignment="Center"/>
+                                <TextBlock Text="DEFECT RATE" FontSize="10" Foreground="{StaticResource SecondaryText}" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Grid>
+                    </Grid>
+
+                    <Border Grid.Column="2" Background="#3A3A4A" CornerRadius="5" Padding="15" Margin="10" VerticalAlignment="Center">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,15">
+                                <TextBlock Text="목표 할당량" Foreground="{StaticResource SecondaryText}" FontSize="12"/>
+                                <TextBlock Text="{Binding AllocationCount}" FontWeight="Bold" Foreground="White" FontSize="18" HorizontalAlignment="Right"/>
+                            </Grid>
+                            <Grid Margin="0,0,0,15">
+                                <TextBlock Text="현재 완료" Foreground="{StaticResource SecondaryText}" FontSize="12"/>
+                                <TextBlock Text="{Binding CurrentComplete}" FontWeight="Bold" Foreground="{StaticResource AccentColor}" FontSize="18" HorizontalAlignment="Right"/>
+                            </Grid>
+                            <Separator Background="#505060" Margin="0,0,0,15"/>
+                            <Grid>
+                                <TextBlock Text="불량률" Foreground="{StaticResource SecondaryText}" FontSize="12"/>
+                                <TextBlock Text="{Binding DefectRate, StringFormat={}{0}%}" FontWeight="Bold" Foreground="#FF5252" FontSize="18" HorizontalAlignment="Right"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
                 </Grid>
             </Border>
         </Grid>
