@@ -7,6 +7,10 @@ namespace AMPManager.ViewModel
     public class MainViewModel : ObservableObject
     {
         private BaseViewModel? _currentViewModel;
+
+        // [추가] 현재 선택된 뷰의 이름 (Main, Log, Settings)
+        private string _currentViewName = "Main";
+
         private readonly Dictionary<string, BaseViewModel> _viewModels;
 
         public ICommand NavigateCommand { get; }
@@ -19,9 +23,15 @@ namespace AMPManager.ViewModel
             set => SetProperty(ref _currentViewModel, value);
         }
 
+        // [추가] XAML에서 버튼 스타일을 바꾸기 위해 이 속성을 바라봅니다.
+        public string CurrentViewName
+        {
+            get => _currentViewName;
+            set => SetProperty(ref _currentViewName, value);
+        }
+
         public MainViewModel()
         {
-            // 1. 화면들 미리 생성
             var homeVM = new HomeViewModel();
             var logVM = new LogViewModel();
             var settingsVM = new SettingsViewModel();
@@ -31,19 +41,20 @@ namespace AMPManager.ViewModel
                 { "Main", homeVM }, { "Log", logVM }, { "Settings", settingsVM }
             };
 
-            // 2. 네비게이션
             NavigateCommand = new RelayCommand(o =>
             {
-                if (o is string p && _viewModels.ContainsKey(p)) CurrentViewModel = _viewModels[p];
+                if (o is string p && _viewModels.ContainsKey(p))
+                {
+                    CurrentViewModel = _viewModels[p];
+                    CurrentViewName = p; // [추가] 탭 변경 시 이름도 업데이트
+                }
             });
 
-            // 3. 시작 버튼 (Home화면 타이머 시작)
             StartCommand = new RelayCommand(o =>
             {
-                if (_viewModels["Main"] is HomeViewModel home) { home.StartSimulation(); CurrentViewModel = home; }
+                if (_viewModels["Main"] is HomeViewModel home) { home.StartSimulation(); CurrentViewModel = home; CurrentViewName = "Main"; }
             });
 
-            // 4. 정지 버튼
             StopCommand = new RelayCommand(o =>
             {
                 if (_viewModels["Main"] is HomeViewModel home) home.StopSimulation();

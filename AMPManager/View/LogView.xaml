@@ -22,12 +22,8 @@
 
                 <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="0,0,0,15">
                     <TextBlock Text="날짜 검색" VerticalAlignment="Center" Foreground="{StaticResource SecondaryText}" Margin="0,0,10,0"/>
-                    <TextBox Text="{Binding SearchDate}" Width="120" Height="30" 
-                             VerticalContentAlignment="Center" Padding="5"
-                             Background="#404050" Foreground="White" BorderThickness="0"/>
-                    <Button Content="검색" Command="{Binding SearchCommand}" 
-                            Width="60" Height="30" Margin="10,0,0,0"
-                            Background="{StaticResource AccentColor}" Foreground="White" FontWeight="Bold" BorderThickness="0">
+                    <TextBox Text="{Binding SearchDate}" Width="120" Height="30" VerticalContentAlignment="Center" Padding="5" Background="#404050" Foreground="White" BorderThickness="0"/>
+                    <Button Content="검색" Command="{Binding SearchCommand}" Width="60" Height="30" Margin="10,0,0,0" Background="{StaticResource AccentColor}" Foreground="White" FontWeight="Bold" BorderThickness="0">
                         <Button.Resources>
                             <Style TargetType="Border">
                                 <Setter Property="CornerRadius" Value="4"/>
@@ -46,10 +42,11 @@
                     <TextBlock Grid.Column="1" Text="속성명" FontWeight="Bold" Foreground="{StaticResource SecondaryText}"/>
                     <TextBlock Grid.Column="2" Text="상태" FontWeight="Bold" Foreground="{StaticResource SecondaryText}" HorizontalAlignment="Center"/>
                 </Grid>
-
                 <Separator Grid.Row="1" VerticalAlignment="Bottom" Background="#4A4A5A"/>
 
-                <DataGrid Grid.Row="2" ItemsSource="{Binding LogData}" 
+                <DataGrid Grid.Row="2" 
+                          ItemsSource="{Binding LogData}" 
+                          SelectedItem="{Binding SelectedLog}" 
                           AutoGenerateColumns="False" 
                           HeadersVisibility="None" 
                           Background="Transparent" 
@@ -58,7 +55,9 @@
                           HorizontalGridLinesBrush="#404050"
                           RowBackground="Transparent"
                           Foreground="{StaticResource PrimaryText}"
-                          RowHeight="35">
+                          RowHeight="35"
+                          SelectionMode="Single"
+                          CanUserAddRows="False">
                     <DataGrid.Resources>
                         <Style TargetType="DataGridCell">
                             <Setter Property="BorderThickness" Value="0"/>
@@ -78,6 +77,10 @@
                                 <Trigger Property="IsMouseOver" Value="True">
                                     <Setter Property="Background" Value="#3A3A4A"/>
                                 </Trigger>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource AccentColor}"/>
+                                    <Setter Property="Foreground" Value="White"/>
+                                </Trigger>
                             </Style.Triggers>
                         </Style>
                     </DataGrid.Resources>
@@ -85,10 +88,16 @@
                     <DataGrid.Columns>
                         <DataGridTextColumn Binding="{Binding Timestamp}" Width="*" Foreground="{StaticResource PrimaryText}"/>
                         <DataGridTextColumn Binding="{Binding PropertyName}" Width="*" Foreground="{StaticResource SecondaryText}"/>
-                        <DataGridTextColumn Binding="{Binding Status}" Width="50" Foreground="{StaticResource AccentColor}" FontWeight="Bold">
+                        <DataGridTextColumn Binding="{Binding Status}" Width="50" FontWeight="Bold">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="TextAlignment" Value="Center"/>
+                                    <Setter Property="Foreground" Value="{StaticResource AccentColor}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Status}" Value="불량">
+                                            <Setter Property="Foreground" Value="#FF5252"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
                                 </Style>
                             </DataGridTextColumn.ElementStyle>
                         </DataGridTextColumn>
@@ -115,14 +124,12 @@
                     </Border>
 
                     <Grid Grid.Row="1" Margin="20">
-                        <Path Data="M 0,80 L 50,40 L 100,60 L 150,20 L 200,50 L 250,30 L 300,60" 
-                              Stroke="Orange" StrokeThickness="3" Stretch="Fill">
+                        <Path Data="{Binding GraphPathTop1}" Stroke="Orange" StrokeThickness="3" Stretch="Fill">
                             <Path.Effect>
                                 <DropShadowEffect Color="Orange" BlurRadius="10" Opacity="0.4"/>
                             </Path.Effect>
                         </Path>
-                        <Path Data="M 0,50 L 50,60 L 100,30 L 150,50 L 200,20 L 250,40 L 300,20" 
-                              Stroke="{StaticResource AccentColor}" StrokeThickness="3" Stretch="Fill">
+                        <Path Data="{Binding GraphPathTop2}" Stroke="{StaticResource AccentColor}" StrokeThickness="3" Stretch="Fill">
                             <Path.Effect>
                                 <DropShadowEffect Color="#00C1D4" BlurRadius="10" Opacity="0.4"/>
                             </Path.Effect>
@@ -150,8 +157,7 @@
                     </Border>
 
                     <Grid Grid.Row="1" Margin="20">
-                        <Path Data="M 0,40 L 50,50 L 100,20 L 150,60 L 200,30 L 250,50 L 300,40" 
-                              Stroke="#B0B0B0" StrokeThickness="3" Stretch="Fill"/>
+                        <Path Data="{Binding GraphPathBottom}" Stroke="#B0B0B0" StrokeThickness="3" Stretch="Fill"/>
 
                         <StackPanel HorizontalAlignment="Right" VerticalAlignment="Top" Orientation="Horizontal">
                             <Rectangle Width="10" Height="10" Fill="#B0B0B0" Margin="0,0,5,0"/>

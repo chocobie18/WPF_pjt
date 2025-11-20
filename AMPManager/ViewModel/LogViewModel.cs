@@ -1,27 +1,44 @@
 ﻿using System;
 using System.Collections.ObjectModel;
 using System.Windows.Input;
-using AMPManager.Core;   // RelayCommand, ObservableObject 사용을 위해 필요
-using AMPManager.Model;  // LogEntry 모델 사용을 위해 필요
+using AMPManager.Core;
+using AMPManager.Model;
 
 namespace AMPManager.ViewModel
 {
     public class LogViewModel : BaseViewModel
     {
-        // 1. 검색 날짜 (화면의 TextBox와 연결)
         public string SearchDate { get; set; } = DateTime.Now.ToString("yyyy.MM.dd");
-
-        // 2. 로그 데이터 리스트 (화면의 DataGrid와 연결)
-        // ObservableCollection은 리스트가 변하면 화면도 자동으로 업데이트해줍니다.
         public ObservableCollection<LogEntry> LogData { get; } = new ObservableCollection<LogEntry>();
-
-        // 3. 검색 버튼 명령 (화면의 버튼과 연결)
         public ICommand SearchCommand { get; }
 
-        // 생성자: 클래스가 만들어질 때 실행되는 부분
+        // [추가] 선택된 로그 항목
+        private LogEntry? _selectedLog;
+        public LogEntry? SelectedLog
+        {
+            get => _selectedLog;
+            set
+            {
+                if (SetProperty(ref _selectedLog, value))
+                {
+                    UpdateGraphData(); // 선택 변경 시 그래프 갱신 함수 호출
+                }
+            }
+        }
+
+        // [추가] 동적 그래프 데이터 (상단 그래프 1, 2 / 하단 그래프 1)
+        private string _graphPathTop1 = "M 0,80 L 50,40 L 100,60 L 150,20 L 200,50 L 250,30 L 300,60";
+        public string GraphPathTop1 { get => _graphPathTop1; set => SetProperty(ref _graphPathTop1, value); }
+
+        private string _graphPathTop2 = "M 0,50 L 50,60 L 100,30 L 150,50 L 200,20 L 250,40 L 300,20";
+        public string GraphPathTop2 { get => _graphPathTop2; set => SetProperty(ref _graphPathTop2, value); }
+
+        private string _graphPathBottom = "M 0,40 L 50,50 L 100,20 L 150,60 L 200,30 L 250,50 L 300,40";
+        public string GraphPathBottom { get => _graphPathBottom; set => SetProperty(ref _graphPathBottom, value); }
+
+
         public LogViewModel()
         {
-            // 화면에 보여줄 가짜(더미) 데이터 20개 생성
             for (int i = 0; i < 20; i++)
             {
                 LogData.Add(new LogEntry
@@ -32,11 +49,39 @@ namespace AMPManager.ViewModel
                 });
             }
 
-            // 검색 버튼을 누르면 실행할 동작 연결
             SearchCommand = new RelayCommand(o =>
             {
                 System.Diagnostics.Debug.WriteLine($"[검색 실행] 날짜: {SearchDate}");
             });
         }
+
+        // [추가] 선택된 항목에 따라 랜덤하게 그래프 모양을 변경하는 함수
+        private void UpdateGraphData()
+        {
+            if (SelectedLog == null) return;
+
+            var rand = new Random();
+
+            // 불량이면 좀 더 튀는 그래프, 정상이면 완만한 그래프를 생성하는 시늉
+            int variance = SelectedLog.Status == "불량" ? 90 : 40;
+            int baseLine = 50;
+
+            GraphPathTop1 = GenerateRandomPath(rand, baseLine, variance);
+            GraphPathTop2 = GenerateRandomPath(rand, baseLine - 10, variance);
+            GraphPathBottom = GenerateRandomPath(rand, baseLine - 20, variance);
+        }
+
+        private string GenerateRandomPath(Random r, int baseY, int variance)
+        {
+            // 0부터 300까지 50단위로 점을 찍어 Path Data 문자열 생성
+            string path = $"M 0,{Clamp(baseY + r.Next(-variance, variance))}";
+            for (int x = 50; x <= 300; x += 50)
+            {
+                path += $" L {x},{Clamp(baseY + r.Next(-variance, variance))}";
+            }
+            return path;
+        }
+
+        private int Clamp(int value) => Math.Max(0, Math.Min(100, value)); // 0~100 사이로 제한
     }
 }
