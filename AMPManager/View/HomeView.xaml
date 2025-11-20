@@ -3,118 +3,144 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:oxy="http://oxyplot.org/wpf" 
              mc:Ignorable="d" 
-             d:DesignHeight="600" d:DesignWidth="1000">
+             d:DesignHeight="720" d:DesignWidth="1280"
+             Background="{StaticResource AppBackground}">
+
     <Grid Margin="10">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="2*"/>
-            <ColumnDefinition Width="1*"/>
+            <ColumnDefinition Width="280"/>
+            <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <!-- 왼쪽: 카메라 및 통계 -->
-        <Grid Grid.Column="0" Margin="0,0,10,0">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="1.5*"/>
-                <RowDefinition Height="1*"/>
-            </Grid.RowDefinitions>
+        <Border Grid.Column="0" Style="{StaticResource PanelStyle}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
 
-            <!-- 카메라 영역 -->
-            <Border Grid.Row="0" Background="#404070" Margin="0,0,0,10">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition/>
-                        <ColumnDefinition/>
-                    </Grid.ColumnDefinitions>
+                <TextBlock Grid.Row="0" Text="로그 목록 (Timestamp)" Style="{StaticResource TitleText}"/>
+                <ListBox Grid.Row="1" 
+                         ItemsSource="{Binding TimestampList}" 
+                         Style="{StaticResource ModernListBox}"
+                         ItemContainerStyle="{StaticResource ModernListBoxItem}"/>
 
-                    <!-- [CAM 1] -->
-                    <Border Grid.Column="0" Margin="10" Background="Black" BorderBrush="Gray" BorderThickness="1">
-                        <Grid>
-                            <Image Source="{Binding CameraImage1}" Stretch="UniformToFill"/>
-                            <TextBlock Text="CAM 1 (OFF)" Foreground="Gray" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding CameraImage1}" Value="{x:Null}">
-                                                <Setter Property="Visibility" Value="Visible"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-                        </Grid>
-                    </Border>
+                <TextBlock Grid.Row="2" Text="불량 메시지" Style="{StaticResource TitleText}" Foreground="#FF5252"/>
+                <ListBox Grid.Row="3" 
+                         ItemsSource="{Binding DefectMessageList}" 
+                         Style="{StaticResource ModernListBox}"
+                         ItemContainerStyle="{StaticResource ModernListBoxItem}"/>
+            </Grid>
+        </Border>
 
-                    <!-- [CAM 2] -->
-                    <Border Grid.Column="1" Margin="10" Background="Black" BorderBrush="Gray" BorderThickness="1">
-                        <Grid>
-                            <Image Source="{Binding CameraImage2}" Stretch="UniformToFill"/>
-                            <TextBlock Text="CAM 2 (OFF)" Foreground="Gray" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding CameraImage2}" Value="{x:Null}">
-                                                <Setter Property="Visibility" Value="Visible"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-                        </Grid>
-                    </Border>
-                </Grid>
-            </Border>
-
-            <!-- 통계 영역 -->
-            <Border Grid.Row="1" Background="#5070A0">
-                <Grid Margin="10">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="1.5*"/>
-                        <ColumnDefinition Width="1*"/>
-                    </Grid.ColumnDefinitions>
-                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                        <TextBlock Text="금일 정보 목록 Time-NOW" FontWeight="Bold" Margin="0,0,0,10"/>
-                        <TextBlock Text="할당량"/>
-                        <ProgressBar Height="30" Value="{Binding AllocationPercent, Mode=OneWay}" Margin="0,0,20,0"/>
-                        <TextBlock Text="{Binding AllocationPercent, StringFormat={}{0}%}" HorizontalAlignment="Right" Margin="0,-25,25,0"/>
-                    </StackPanel>
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Background="#7080B0" Margin="10">
-                        <TextBlock Text="{Binding AllocationCount, StringFormat=금일 할당량 : {0}}" FontWeight="Bold" Margin="5"/>
-                        <TextBlock Text="{Binding CurrentComplete, StringFormat=현재 완료 : {0}}" FontWeight="Bold" Margin="5"/>
-                        <TextBlock Text="{Binding DefectRate, StringFormat=불량률 : {0}%}" FontWeight="Bold" Margin="5"/>
-                    </StackPanel>
-                </Grid>
-            </Border>
-        </Grid>
-
-        <!-- 오른쪽: 리스트 -->
         <Grid Grid.Column="1">
             <Grid.RowDefinitions>
                 <RowDefinition Height="*"/>
-                <RowDefinition Height="*"/>
+                <RowDefinition Height="280"/>
             </Grid.RowDefinitions>
-            <Border Grid.Row="0" Background="#A0A0C0" Margin="0,0,0,10">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-                    <TextBlock Text="TIMESTAMP_LIST" Background="White" TextAlignment="Center" Padding="5"/>
-                    <ListBox Grid.Row="1" ItemsSource="{Binding TimestampList}" Background="Transparent" BorderThickness="0"/>
+
+            <Grid Grid.Row="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <Border Grid.Column="0" Style="{StaticResource PanelStyle}" Margin="0,5,5,5">
+                    <Grid>
+                        <Image Source="{Binding CameraImage1}" Stretch="Uniform"/>
+                        <TextBlock Text="CAM 1 (OFF)" 
+                                   Foreground="{StaticResource SecondaryText}" 
+                                   FontSize="24" FontWeight="SemiBold"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding CameraImage1}" Value="{x:Null}">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Grid>
+                </Border>
+
+                <Border Grid.Column="1" Style="{StaticResource PanelStyle}" Margin="5,5,0,5">
+                    <Grid>
+                        <Image Source="{Binding CameraImage2}" Stretch="Uniform"/>
+                        <TextBlock Text="CAM 2 (OFF)" 
+                                   Foreground="{StaticResource SecondaryText}" 
+                                   FontSize="24" FontWeight="SemiBold"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding CameraImage2}" Value="{x:Null}">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <Border Grid.Row="1" Style="{StaticResource PanelStyle}">
+                <Grid Margin="15">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="300"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                        <TextBlock Text="금일 정보 목록 (Time-NOW)" Style="{StaticResource TitleText}" Margin="0,0,0,15"/>
+
+                        <Grid Margin="0,0,0,10">
+                            <TextBlock Text="작업 진행률" Foreground="{StaticResource SecondaryText}" VerticalAlignment="Bottom"/>
+                            <TextBlock Text="{Binding AllocationPercent, StringFormat={}{0}%}" 
+                                       HorizontalAlignment="Right" Foreground="{StaticResource AccentColor}" FontWeight="Bold"/>
+                        </Grid>
+
+                        <ProgressBar Value="{Binding AllocationPercent, Mode=OneWay}" 
+                                     Height="15" 
+                                     Background="#404050" 
+                                     Foreground="{StaticResource AccentColor}" 
+                                     BorderThickness="0"
+                                     Margin="0,0,0,20"/>
+
+                        <Border Background="#3A3A4A" CornerRadius="5" Padding="15">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,10">
+                                    <TextBlock Text="금일 할당량" Foreground="{StaticResource SecondaryText}"/>
+                                    <TextBlock Text="{Binding AllocationCount}" FontWeight="Bold" Foreground="White" HorizontalAlignment="Right"/>
+                                </Grid>
+                                <Grid Margin="0,0,0,10">
+                                    <TextBlock Text="현재 완료" Foreground="{StaticResource SecondaryText}"/>
+                                    <TextBlock Text="{Binding CurrentComplete}" FontWeight="Bold" Foreground="{StaticResource AccentColor}" HorizontalAlignment="Right"/>
+                                </Grid>
+                                <Separator Background="#505060" Margin="0,0,0,10"/>
+                                <Grid>
+                                    <TextBlock Text="불량률" Foreground="{StaticResource SecondaryText}"/>
+                                    <TextBlock Text="{Binding DefectRate, StringFormat={}{0}%}" FontWeight="Bold" Foreground="#FF5252" HorizontalAlignment="Right"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <Grid Grid.Column="1" Margin="20,0,0,0">
+                        <TextBlock Text="실시간 검사 수치 변화" Style="{StaticResource TitleText}" VerticalAlignment="Top"/>
+                        <oxy:PlotView Model="{Binding MyPlotModel}" 
+                                      Background="Transparent"
+                                      Margin="0,30,0,0"/>
+                    </Grid>
                 </Grid>
-            </Border>
-            <Border Grid.Row="1" Background="#8080A0">
-                <StackPanel Margin="10">
-                    <TextBlock Text="불량 메시지" FontWeight="Bold"/>
-                    <ItemsControl ItemsSource="{Binding DefectMessageList}" Margin="0,10,0,0">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding}" Foreground="DarkRed" Margin="0,3"/>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
             </Border>
         </Grid>
     </Grid>
