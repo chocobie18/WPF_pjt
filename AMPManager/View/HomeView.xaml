@@ -1,0 +1,121 @@
+﻿<UserControl x:Class="AMPManager.View.HomeView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="1000">
+    <Grid Margin="10">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="2*"/>
+            <ColumnDefinition Width="1*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- 왼쪽: 카메라 및 통계 -->
+        <Grid Grid.Column="0" Margin="0,0,10,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="1.5*"/>
+                <RowDefinition Height="1*"/>
+            </Grid.RowDefinitions>
+
+            <!-- 카메라 영역 -->
+            <Border Grid.Row="0" Background="#404070" Margin="0,0,0,10">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition/>
+                        <ColumnDefinition/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- [CAM 1] -->
+                    <Border Grid.Column="0" Margin="10" Background="Black" BorderBrush="Gray" BorderThickness="1">
+                        <Grid>
+                            <Image Source="{Binding CameraImage1}" Stretch="UniformToFill"/>
+                            <TextBlock Text="CAM 1 (OFF)" Foreground="Gray" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding CameraImage1}" Value="{x:Null}">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Grid>
+                    </Border>
+
+                    <!-- [CAM 2] -->
+                    <Border Grid.Column="1" Margin="10" Background="Black" BorderBrush="Gray" BorderThickness="1">
+                        <Grid>
+                            <Image Source="{Binding CameraImage2}" Stretch="UniformToFill"/>
+                            <TextBlock Text="CAM 2 (OFF)" Foreground="Gray" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding CameraImage2}" Value="{x:Null}">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <!-- 통계 영역 -->
+            <Border Grid.Row="1" Background="#5070A0">
+                <Grid Margin="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="1.5*"/>
+                        <ColumnDefinition Width="1*"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                        <TextBlock Text="금일 정보 목록 Time-NOW" FontWeight="Bold" Margin="0,0,0,10"/>
+                        <TextBlock Text="할당량"/>
+                        <ProgressBar Height="30" Value="{Binding AllocationPercent, Mode=OneWay}" Margin="0,0,20,0"/>
+                        <TextBlock Text="{Binding AllocationPercent, StringFormat={}{0}%}" HorizontalAlignment="Right" Margin="0,-25,25,0"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Background="#7080B0" Margin="10">
+                        <TextBlock Text="{Binding AllocationCount, StringFormat=금일 할당량 : {0}}" FontWeight="Bold" Margin="5"/>
+                        <TextBlock Text="{Binding CurrentComplete, StringFormat=현재 완료 : {0}}" FontWeight="Bold" Margin="5"/>
+                        <TextBlock Text="{Binding DefectRate, StringFormat=불량률 : {0}%}" FontWeight="Bold" Margin="5"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- 오른쪽: 리스트 -->
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <Border Grid.Row="0" Background="#A0A0C0" Margin="0,0,0,10">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="TIMESTAMP_LIST" Background="White" TextAlignment="Center" Padding="5"/>
+                    <ListBox Grid.Row="1" ItemsSource="{Binding TimestampList}" Background="Transparent" BorderThickness="0"/>
+                </Grid>
+            </Border>
+            <Border Grid.Row="1" Background="#8080A0">
+                <StackPanel Margin="10">
+                    <TextBlock Text="불량 메시지" FontWeight="Bold"/>
+                    <ItemsControl ItemsSource="{Binding DefectMessageList}" Margin="0,10,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding}" Foreground="DarkRed" Margin="0,3"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

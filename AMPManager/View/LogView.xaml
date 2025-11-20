@@ -1,0 +1,75 @@
+﻿<UserControl x:Class="AMPManager.View.LogView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignHeight="600" d:DesignWidth="1000">
+    <Grid Margin="10">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="1*"/>
+            <ColumnDefinition Width="2*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- 왼쪽: 리스트 -->
+        <Border Grid.Column="0" Background="#6080B0" Margin="0,0,10,0" Padding="10">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="0,0,0,10">
+                    <TextBox Text="{Binding SearchDate}" Width="100" Margin="0,0,5,0" VerticalContentAlignment="Center"/>
+                    <Button Content="검색" Command="{Binding SearchCommand}" Width="60"/>
+                </StackPanel>
+                <TextBlock Grid.Row="1" Text="TIMESTAMP | 속성들" FontWeight="Bold" Margin="0,0,0,5" Foreground="White"/>
+                <DataGrid Grid.Row="2" ItemsSource="{Binding LogData}" AutoGenerateColumns="False" HeadersVisibility="None" Background="Transparent" RowBackground="#7090C0" AlternatingRowBackground="#6080B0" BorderThickness="0" GridLinesVisibility="Horizontal">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Binding="{Binding Timestamp}" Width="*" Foreground="White"/>
+                        <DataGridTextColumn Binding="{Binding PropertyName}" Width="*" Foreground="White"/>
+                        <DataGridTextColumn Binding="{Binding Status}" Width="50" Foreground="White"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Grid>
+        </Border>
+
+        <!-- 오른쪽: 상세 분석 -->
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <Grid Grid.Row="0" Margin="0,0,0,5">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <Border Grid.Row="0" Background="#506090" Margin="0,0,0,5">
+                    <TextBlock Text="상 - 이미지" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <Border Grid.Row="1" Background="#303050">
+                    <Grid Margin="10">
+                        <Path Data="M 0,80 L 50,40 L 100,60 L 150,20 L 200,50 L 250,30 L 300,60" Stroke="Orange" StrokeThickness="2" Stretch="Fill"/>
+                        <Path Data="M 0,50 L 50,60 L 100,30 L 150,50 L 200,20 L 250,40 L 300,20" Stroke="SkyBlue" StrokeThickness="2" Stretch="Fill"/>
+                        <TextBlock Text="계열 1 / 계열 2" Foreground="White" FontSize="10" HorizontalAlignment="Right"/>
+                    </Grid>
+                </Border>
+            </Grid>
+            <Grid Grid.Row="1" Margin="0,5,0,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <Border Grid.Row="0" Background="#506090" Margin="0,0,0,5">
+                    <TextBlock Text="하 - 이미지" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <Border Grid.Row="1" Background="#303050">
+                    <Grid Margin="10">
+                        <Path Data="M 0,40 L 50,50 L 100,20 L 150,60 L 200,30 L 250,50 L 300,40" Stroke="LightGray" StrokeThickness="2" Stretch="Fill"/>
+                        <TextBlock Text="계열 3" Foreground="White" FontSize="10" HorizontalAlignment="Right"/>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
+    </Grid>
+</UserControl>
