@@ -7,8 +7,8 @@ using System.Windows.Threading;
 using AMPManager.Core;
 using OpenCvSharp;
 using OpenCvSharp.WpfExtensions;
-using OxyPlot;        // [필수] PlotModel, OxyColor 사용
-using OxyPlot.Series; // [필수] PieSeries, PieSlice 사용
+using OxyPlot;
+using OxyPlot.Series;
 
 namespace AMPManager.ViewModel
 {
@@ -18,18 +18,17 @@ namespace AMPManager.ViewModel
         private ApiService _apiService = new ApiService();
         private bool _isCameraRunning = false;
 
-        // --- 원형 그래프 모델 2개 ---
-        public PlotModel WorkPieModel { get; private set; }  // 작업 진행률
-        public PlotModel DefectPieModel { get; private set; } // 불량률
+        // --- 원형 그래프 모델 ---
+        public PlotModel WorkPieModel { get; private set; }
+        public PlotModel DefectPieModel { get; private set; }
 
         // --- 카메라 객체 ---
         private VideoCapture? _capture1;
         private VideoCapture? _capture2;
-
         private ImageSource? _cameraImage1;
-        public ImageSource? CameraImage1 { get => _cameraImage1; set => SetProperty(ref _cameraImage1, value); }
-
         private ImageSource? _cameraImage2;
+
+        public ImageSource? CameraImage1 { get => _cameraImage1; set => SetProperty(ref _cameraImage1, value); }
         public ImageSource? CameraImage2 { get => _cameraImage2; set => SetProperty(ref _cameraImage2, value); }
 
         // --- 데이터 ---
@@ -37,7 +36,7 @@ namespace AMPManager.ViewModel
         private int _currentComplete = 0;
         private double _defectRate = 0;
 
-        public int AllocationPercent => _allocationCount == 0 ? 0 : (int)((double)_currentComplete / _allocationCount * 100);
+        public double AllocationPercent => _allocationCount == 0 ? 0.0 : (double)_currentComplete / _allocationCount * 100.0;
 
         public int AllocationCount
         {
@@ -69,20 +68,19 @@ namespace AMPManager.ViewModel
 
         public HomeViewModel()
         {
-            // 1. 차트 초기화 (도넛 모양)
+            // 1. 차트 초기화
             WorkPieModel = CreateDonutModel();
             DefectPieModel = CreateDonutModel();
 
             // 2. 초기 데이터 설정
             UpdateCharts();
 
-            // 3. 타이머 설정
+            // 3. 타이머
             _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
             _timer.Tick += Timer_Tick;
             InitializeCamerasAsync();
         }
 
-        // 도넛 차트 기본 설정 함수
         private PlotModel CreateDonutModel()
         {
             var model = new PlotModel { Title = null };
@@ -94,9 +92,9 @@ namespace AMPManager.ViewModel
                 StrokeThickness = 0,
                 AngleSpan = 360,
                 StartAngle = -90,
-                    InnerRadius = 0.6, // 도넛 모양 (0.0 ~ 1.0)
-                OutsideLabelFormat = null, // 바깥 라벨 숨김
-                InsideLabelFormat = null,  // 안쪽 라벨 숨김
+                InnerDiameter = 0.6,
+                OutsideLabelFormat = null,
+                InsideLabelFormat = null,
                 TickHorizontalLength = 0,
                 TickRadialLength = 0
             };
@@ -105,7 +103,6 @@ namespace AMPManager.ViewModel
             return model;
         }
 
-        // 데이터가 변경될 때 차트 갱신
         private void UpdateCharts()
         {
             // 1. 작업 진행률 갱신
@@ -114,23 +111,28 @@ namespace AMPManager.ViewModel
                 workSeries.Slices.Clear();
                 double remaining = Math.Max(0, AllocationCount - CurrentComplete);
 
-                // 완료 (민트색)
+                // 완료 (민트색), 잔여 (회색)
                 workSeries.Slices.Add(new PieSlice("완료", CurrentComplete) { Fill = OxyColor.Parse("#00C1D4") });
-                // 잔여 (어두운 회색)
                 workSeries.Slices.Add(new PieSlice("잔여", remaining) { Fill = OxyColor.Parse("#404050") });
 
                 WorkPieModel.InvalidatePlot(true);
             }
 
-            // 2. 불량률 갱신
+            // 2. 불량률 갱신 (여기를 수정했습니다!)
             if (DefectPieModel.Series.Count > 0 && DefectPieModel.Series[0] is PieSeries defectSeries)
             {
                 defectSeries.Slices.Clear();
 
+                // 0~100 사이로 값 제한
+                double safeDefectRate = Math.Max(0.0, Math.Min(100.0, DefectRate));
+                double normalRate = 100.0 - safeDefectRate;
+
                 // 불량 (빨간색)
-                defectSeries.Slices.Add(new PieSlice("불량", DefectRate) { Fill = OxyColor.Parse("#FF5252") });
-                // 정상 (배경색과 비슷한 어두운 색)
-                defectSeries.Slices.Add(new PieSlice("정상", 100.0 - DefectRate) { Fill = OxyColor.Parse("#2F2F3D") });
+                defectSeries.Slices.Add(new PieSlice("불량", safeDefectRate) { Fill = OxyColor.Parse("#FF5252") });
+
+                // [수정됨] 정상 부분을 배경색(#2F2F3D)에서 -> 작업 진행률과 똑같은 회색(#404050)으로 변경!
+                // 이제 불량률 그래프도 회색 베이스 원이 보일 겁니다.
+                defectSeries.Slices.Add(new PieSlice("정상", normalRate) { Fill = OxyColor.Parse("#404050") });
 
                 DefectPieModel.InvalidatePlot(true);
             }
@@ -155,8 +157,7 @@ namespace AMPManager.ViewModel
                 var window = System.Windows.Application.Current.MainWindow;
                 if (window != null && window.ActualWidth > 0 && window.ActualHeight > 0)
                 {
-                    int w = (int)window.ActualWidth;
-                    int h = (int)window.ActualHeight;
+                    int w = (int)window.ActualWidth; int h = (int)window.ActualHeight;
                     RenderTargetBitmap bmp = new RenderTargetBitmap(w, h, 96, 96, PixelFormats.Pbgra32);
                     bmp.Render(window);
                     JpegBitmapEncoder encoder = new JpegBitmapEncoder();
@@ -171,45 +172,15 @@ namespace AMPManager.ViewModel
             catch { }
         }
 
-        public void StartSimulation()
-        {
-            if (!_timer.IsEnabled)
-            {
-                _timer.Start();
-                _isCameraRunning = true;
-                RunCameraLoop(_capture1, () => CameraImage1, img => CameraImage1 = img);
-                RunCameraLoop(_capture2, () => CameraImage2, img => CameraImage2 = img);
-            }
-        }
+        public void StartSimulation() { if (!_timer.IsEnabled) { _timer.Start(); _isCameraRunning = true; RunCameraLoop(_capture1, () => CameraImage1, img => CameraImage1 = img); RunCameraLoop(_capture2, () => CameraImage2, img => CameraImage2 = img); } }
+        public void StopSimulation() { if (_timer.IsEnabled) { _timer.Stop(); _isCameraRunning = false; } }
 
-        public void StopSimulation()
-        {
-            if (_timer.IsEnabled)
-            {
-                _timer.Stop();
-                _isCameraRunning = false;
-            }
-        }
-
-        private async void InitializeCamerasAsync()
-        {
-            await Task.Run(() =>
-            {
-                try
-                {
-                    _capture1 = new VideoCapture(0, VideoCaptureAPIs.DSHOW);
-                    _capture2 = new VideoCapture(1, VideoCaptureAPIs.DSHOW);
-                }
-                catch { }
-            });
-        }
+        private async void InitializeCamerasAsync() { await Task.Run(() => { try { _capture1 = new VideoCapture(0, VideoCaptureAPIs.DSHOW); _capture2 = new VideoCapture(1, VideoCaptureAPIs.DSHOW); } catch { } }); }
 
         private async void RunCameraLoop(VideoCapture? capture, Func<ImageSource?> getImage, Action<ImageSource?> updateImage)
         {
             if (capture == null || !capture.IsOpened()) return;
-
-            await Task.Run(() =>
-            {
+            await Task.Run(() => {
                 using var frame = new Mat();
                 while (_isCameraRunning)
                 {
@@ -218,18 +189,10 @@ namespace AMPManager.ViewModel
                         capture.Read(frame);
                         if (!frame.Empty())
                         {
-                            System.Windows.Application.Current.Dispatcher.Invoke(() =>
-                            {
-                                var writeableBitmap = getImage() as WriteableBitmap;
-                                if (writeableBitmap == null || writeableBitmap.PixelWidth != frame.Width || writeableBitmap.PixelHeight != frame.Height)
-                                {
-                                    writeableBitmap = frame.ToWriteableBitmap();
-                                    updateImage(writeableBitmap);
-                                }
-                                else
-                                {
-                                    WriteableBitmapConverter.ToWriteableBitmap(frame, writeableBitmap);
-                                }
+                            System.Windows.Application.Current.Dispatcher.Invoke(() => {
+                                var wb = getImage() as WriteableBitmap;
+                                if (wb == null || wb.PixelWidth != frame.Width || wb.PixelHeight != frame.Height) updateImage(frame.ToWriteableBitmap());
+                                else WriteableBitmapConverter.ToWriteableBitmap(frame, wb);
                             });
                         }
                     }

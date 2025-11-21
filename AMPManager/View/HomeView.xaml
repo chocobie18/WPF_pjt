@@ -99,7 +99,7 @@
                         <Grid Margin="0,30,0,0">
                             <oxy:PlotView Model="{Binding WorkPieModel}" Background="Transparent"/>
                             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False">
-                                <TextBlock Text="{Binding AllocationPercent, StringFormat={}{0}%}" 
+                                <TextBlock Text="{Binding AllocationPercent, StringFormat={}{0:F1}%}" 
                                            FontSize="36" FontWeight="Bold" Foreground="{StaticResource AccentColor}" 
                                            HorizontalAlignment="Center"/>
                                 <TextBlock Text="COMPLETED" FontSize="10" Foreground="{StaticResource SecondaryText}" HorizontalAlignment="Center"/>
@@ -133,7 +133,7 @@
                             <Separator Background="#505060" Margin="0,0,0,15"/>
                             <Grid>
                                 <TextBlock Text="불량률" Foreground="{StaticResource SecondaryText}" FontSize="12"/>
-                                <TextBlock Text="{Binding DefectRate, StringFormat={}{0}%}" FontWeight="Bold" Foreground="#FF5252" FontSize="18" HorizontalAlignment="Right"/>
+                                <TextBlock Text="{Binding DefectRate, StringFormat={}{0:F1}%}" FontWeight="Bold" Foreground="#FF5252" FontSize="18" HorizontalAlignment="Right"/>
                             </Grid>
                         </StackPanel>
                     </Border>
