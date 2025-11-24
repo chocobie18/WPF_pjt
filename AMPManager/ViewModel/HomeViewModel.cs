@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
-using AMPManager.Core;
+using AMPManager.Core; // [필수] DatabaseManager가 여기 들어있습니다.
 using OpenCvSharp;
 using OpenCvSharp.WpfExtensions;
 using OxyPlot;
@@ -17,6 +17,9 @@ namespace AMPManager.ViewModel
         private DispatcherTimer _timer;
         private ApiService _apiService = new ApiService();
         private bool _isCameraRunning = false;
+
+        // [추가 1] DB 매니저 생성 (이 친구가 저장을 담당합니다)
+        private DatabaseManager _dbManager = new DatabaseManager();
 
         // --- 원형 그래프 모델 ---
         public PlotModel WorkPieModel { get; private set; }
@@ -118,7 +121,7 @@ namespace AMPManager.ViewModel
                 WorkPieModel.InvalidatePlot(true);
             }
 
-            // 2. 불량률 갱신 (여기를 수정했습니다!)
+            // 2. 불량률 갱신
             if (DefectPieModel.Series.Count > 0 && DefectPieModel.Series[0] is PieSeries defectSeries)
             {
                 defectSeries.Slices.Clear();
@@ -130,8 +133,7 @@ namespace AMPManager.ViewModel
                 // 불량 (빨간색)
                 defectSeries.Slices.Add(new PieSlice("불량", safeDefectRate) { Fill = OxyColor.Parse("#FF5252") });
 
-                // [수정됨] 정상 부분을 배경색(#2F2F3D)에서 -> 작업 진행률과 똑같은 회색(#404050)으로 변경!
-                // 이제 불량률 그래프도 회색 베이스 원이 보일 겁니다.
+                // 정상 (회색)
                 defectSeries.Slices.Add(new PieSlice("정상", normalRate) { Fill = OxyColor.Parse("#404050") });
 
                 DefectPieModel.InvalidatePlot(true);
@@ -140,6 +142,16 @@ namespace AMPManager.ViewModel
 
         private async void Timer_Tick(object? sender, EventArgs e)
         {
+            // [추가 2] 가짜 저장 로직
+            // 현재 시간이 5초 단위(0초, 5초, 10초...)일 때마다 DB에 저장합니다.
+            // 나중에 알고리즘이 완성되면 이 코드를 지우고, 진짜 판정 결과가 나왔을 때 InsertMeasurement를 호출하면 됩니다.
+            if (DateTime.Now.Second % 5 == 0)
+            {
+                // 제품ID 1번(M6 Bolt), 현재시간 저장
+                _dbManager.InsertMeasurement(1, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+                System.Diagnostics.Debug.WriteLine("DB에 자동 저장됨!");
+            }
+
             var data = await _apiService.GetStatusAsync();
             if (data != null)
             {
@@ -195,7 +207,7 @@ namespace AMPManager.ViewModel
                                 else WriteableBitmapConverter.ToWriteableBitmap(frame, wb);
                             });
                         }
-                    }   
+                    }
                     catch { }
                     System.Threading.Thread.Sleep(33);
                 }

@@ -1,15 +1,14 @@
-﻿using System.Configuration;
-using System.Data;
-using System.Windows;
+﻿using System.Windows;
 
 namespace AMPManager
 {
     /// <summary>
-    /// Interaction logic for App.xaml
+    /// App.xaml에 대한 상호 작용 논리
     /// </summary>
-    // [수정] 그냥 Application이라고 쓰면 헷갈려하므로, 
-    // System.Windows.Application 이라고 풀네임을 적어줍니다.
+    // [중요] 'System.Windows.Application' 이라고 풀네임 사용 (모호한 참조 에러 해결)
     public partial class App : System.Windows.Application
     {
+        // [중요] 이곳은 비워두는 게 맞습니다.
+        // InitializeComponent() 나 Main() 함수가 보이면 무조건 지우세요!
     }
 }

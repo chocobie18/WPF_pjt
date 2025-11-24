@@ -1,1 +1,0 @@
-﻿namespace AMPManager.ViewModel { public class SettingsViewModel : BaseViewModel { } }

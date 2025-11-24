@@ -14,10 +14,9 @@
             <v:LogView/>
         </DataTemplate>
 
-        <DataTemplate DataType="{x:Type vm:SettingsViewModel}">
-            <v:SettingsView/>
+        <DataTemplate DataType="{x:Type vm:StatisticsViewModel}">
+            <v:StatisticsView/>
         </DataTemplate>
-
 
         <SolidColorBrush x:Key="AppBackground" Color="#1E1E2D"/>
         <SolidColorBrush x:Key="PanelBackground" Color="#2F2F3D"/>
