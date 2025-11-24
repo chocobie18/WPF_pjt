@@ -47,6 +47,7 @@
                 <DataGrid Grid.Row="2" 
                           ItemsSource="{Binding LogData}" 
                           SelectedItem="{Binding SelectedLog}" 
+                          IsReadOnly="True"
                           AutoGenerateColumns="False" 
                           HeadersVisibility="None" 
                           Background="Transparent" 
@@ -54,10 +55,10 @@
                           GridLinesVisibility="Horizontal"
                           HorizontalGridLinesBrush="#404050"
                           RowBackground="Transparent"
-                          Foreground="{StaticResource PrimaryText}"
                           RowHeight="35"
                           SelectionMode="Single"
                           CanUserAddRows="False">
+
                     <DataGrid.Resources>
                         <Style TargetType="DataGridCell">
                             <Setter Property="BorderThickness" Value="0"/>
@@ -72,6 +73,7 @@
                                 </Setter.Value>
                             </Setter>
                         </Style>
+
                         <Style TargetType="DataGridRow">
                             <Style.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
@@ -79,23 +81,52 @@
                                 </Trigger>
                                 <Trigger Property="IsSelected" Value="True">
                                     <Setter Property="Background" Value="{StaticResource AccentColor}"/>
-                                    <Setter Property="Foreground" Value="White"/>
                                 </Trigger>
                             </Style.Triggers>
                         </Style>
                     </DataGrid.Resources>
 
                     <DataGrid.Columns>
-                        <DataGridTextColumn Binding="{Binding Timestamp}" Width="*" Foreground="{StaticResource PrimaryText}"/>
-                        <DataGridTextColumn Binding="{Binding PropertyName}" Width="*" Foreground="{StaticResource SecondaryText}"/>
-                        <DataGridTextColumn Binding="{Binding Status}" Width="50" FontWeight="Bold">
+                        <DataGridTextColumn Binding="{Binding Timestamp}" Width="*">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{StaticResource PrimaryText}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=DataGridRow}}" Value="True">
+                                            <Setter Property="Foreground" Value="White"/>
+                                            <Setter Property="FontWeight" Value="Bold"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+
+                        <DataGridTextColumn Binding="{Binding PropertyName}" Width="*">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{StaticResource SecondaryText}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=DataGridRow}}" Value="True">
+                                            <Setter Property="Foreground" Value="White"/>
+                                            <Setter Property="FontWeight" Value="Bold"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+
+                        <DataGridTextColumn Binding="{Binding Status}" Width="50">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="TextAlignment" Value="Center"/>
                                     <Setter Property="Foreground" Value="{StaticResource AccentColor}"/>
+                                    <Setter Property="FontWeight" Value="Bold"/>
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding Status}" Value="불량">
                                             <Setter Property="Foreground" Value="#FF5252"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=DataGridRow}}" Value="True">
+                                            <Setter Property="Foreground" Value="White"/>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>

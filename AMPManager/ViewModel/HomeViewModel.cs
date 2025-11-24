@@ -195,7 +195,7 @@ namespace AMPManager.ViewModel
                                 else WriteableBitmapConverter.ToWriteableBitmap(frame, wb);
                             });
                         }
-                    }
+                    }   
                     catch { }
                     System.Threading.Thread.Sleep(33);
                 }
