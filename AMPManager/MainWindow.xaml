@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:AMPManager.ViewModel"
         xmlns:v="clr-namespace:AMPManager.View"
-        Title="AMP Manager" Height="768" Width="1366" 
+        Title="AMP Manager" Height="900" Width="1600" 
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource AppBackground}">
 

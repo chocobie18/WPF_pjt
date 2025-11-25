@@ -1,202 +1,105 @@
 ﻿<UserControl x:Class="AMPManager.View.LogView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             mc:Ignorable="d" d:DesignHeight="600" d:DesignWidth="1000"
              Background="{StaticResource AppBackground}">
 
-    <Grid Margin="10">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="1*"/>
-            <ColumnDefinition Width="2*"/>
-        </Grid.ColumnDefinitions>
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
 
-        <Border Grid.Column="0" Style="{StaticResource PanelStyle}" Margin="0,0,10,0">
+        <Border Grid.Row="0" Style="{StaticResource PanelStyle}" Margin="0,0,0,15" Padding="15">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+
+                <TextBlock Text="날짜" VerticalAlignment="Center" Foreground="{StaticResource SecondaryText}" Margin="0,0,10,0"/>
+                <TextBox Text="{Binding SearchDate}" Width="120" Height="30" VerticalContentAlignment="Center" Padding="5" Background="#404050" Foreground="White" BorderThickness="0"/>
+
+                <CheckBox Content="정상" IsChecked="{Binding IsCheckedNormal}" 
+                          Foreground="{StaticResource PrimaryText}" VerticalAlignment="Center" Margin="30,0,10,0"
+                          Style="{StaticResource {x:Type CheckBox}}"/>
+                <CheckBox Content="불량" IsChecked="{Binding IsCheckedDefect}" 
+                          Foreground="#FF5252" VerticalAlignment="Center" Margin="10,0,0,0"/>
+
+                <Button Content="조회" Command="{Binding SearchCommand}" Width="80" Height="30" Margin="30,0,0,0" 
+                        Background="{StaticResource AccentColor}" Foreground="White" FontWeight="Bold" BorderThickness="0">
+                    <Button.Resources>
+                        <Style TargetType="Border">
+                            <Setter Property="CornerRadius" Value="4"/>
+                        </Style>
+                    </Button.Resources>
+                </Button>
+            </StackPanel>
+        </Border>
+
+        <Border Grid.Row="1" Style="{StaticResource PanelStyle}">
             <Grid Margin="10">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="40"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="0,0,0,15">
-                    <TextBlock Text="날짜 검색" VerticalAlignment="Center" Foreground="{StaticResource SecondaryText}" Margin="0,0,10,0"/>
-                    <TextBox Text="{Binding SearchDate}" Width="120" Height="30" VerticalContentAlignment="Center" Padding="5" Background="#404050" Foreground="White" BorderThickness="0"/>
-                    <Button Content="검색" Command="{Binding SearchCommand}" Width="60" Height="30" Margin="10,0,0,0" Background="{StaticResource AccentColor}" Foreground="White" FontWeight="Bold" BorderThickness="0">
-                        <Button.Resources>
-                            <Style TargetType="Border">
-                                <Setter Property="CornerRadius" Value="4"/>
-                            </Style>
-                        </Button.Resources>
-                    </Button>
-                </StackPanel>
-
-                <Grid Grid.Row="1" Margin="0,0,0,10">
+                <Grid Grid.Row="0">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="50"/>
+                        <ColumnDefinition Width="2*"/>
+                        <ColumnDefinition Width="2*"/>
+                        <ColumnDefinition Width="1*"/>
+                        <ColumnDefinition Width="1*"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="TIMESTAMP" FontWeight="Bold" Foreground="{StaticResource SecondaryText}"/>
-                    <TextBlock Grid.Column="1" Text="속성명" FontWeight="Bold" Foreground="{StaticResource SecondaryText}"/>
-                    <TextBlock Grid.Column="2" Text="상태" FontWeight="Bold" Foreground="{StaticResource SecondaryText}" HorizontalAlignment="Center"/>
+                    <TextBlock Grid.Column="0" Text="TIMESTAMP" FontWeight="Bold" Foreground="{StaticResource SecondaryText}" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Column="1" Text="제품명 (Product)" FontWeight="Bold" Foreground="{StaticResource SecondaryText}" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Column="2" Text="판정" FontWeight="Bold" Foreground="{StaticResource SecondaryText}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Column="3" Text="상세" FontWeight="Bold" Foreground="{StaticResource SecondaryText}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Grid>
-                <Separator Grid.Row="1" VerticalAlignment="Bottom" Background="#4A4A5A"/>
 
-                <DataGrid Grid.Row="2" 
-                          ItemsSource="{Binding LogData}" 
-                          SelectedItem="{Binding SelectedLog}" 
-                          IsReadOnly="True"
-                          AutoGenerateColumns="False" 
-                          HeadersVisibility="None" 
-                          Background="Transparent" 
-                          BorderThickness="0" 
-                          GridLinesVisibility="Horizontal"
-                          HorizontalGridLinesBrush="#404050"
-                          RowBackground="Transparent"
-                          RowHeight="35"
-                          SelectionMode="Single"
-                          CanUserAddRows="False">
+                <Separator Grid.Row="1" Background="#4A4A5A" Margin="0,0,0,5"/>
 
-                    <DataGrid.Resources>
-                        <Style TargetType="DataGridCell">
-                            <Setter Property="BorderThickness" Value="0"/>
-                            <Setter Property="Padding" Value="0,8"/>
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="DataGridCell">
-                                        <Border Padding="{TemplateBinding Padding}" Background="Transparent">
-                                            <ContentPresenter VerticalAlignment="Center"/>
-                                        </Border>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                        </Style>
-
-                        <Style TargetType="DataGridRow">
-                            <Style.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="#3A3A4A"/>
-                                </Trigger>
-                                <Trigger Property="IsSelected" Value="True">
-                                    <Setter Property="Background" Value="{StaticResource AccentColor}"/>
-                                </Trigger>
-                            </Style.Triggers>
-                        </Style>
-                    </DataGrid.Resources>
+                <DataGrid Grid.Row="2" ItemsSource="{Binding LogData}" 
+                          AutoGenerateColumns="False" HeadersVisibility="None" Background="Transparent" 
+                          BorderThickness="0" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#404050"
+                          RowBackground="Transparent" RowHeight="45" SelectionMode="Single" IsReadOnly="True">
 
                     <DataGrid.Columns>
-                        <DataGridTextColumn Binding="{Binding Timestamp}" Width="*">
-                            <DataGridTextColumn.ElementStyle>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="Foreground" Value="{StaticResource PrimaryText}"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=DataGridRow}}" Value="True">
-                                            <Setter Property="Foreground" Value="White"/>
-                                            <Setter Property="FontWeight" Value="Bold"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </DataGridTextColumn.ElementStyle>
-                        </DataGridTextColumn>
+                        <DataGridTextColumn Binding="{Binding Timestamp}" Width="2*" Foreground="{StaticResource PrimaryText}"/>
+                        <DataGridTextColumn Binding="{Binding PropertyName}" Width="2*" Foreground="{StaticResource SecondaryText}"/>
 
-                        <DataGridTextColumn Binding="{Binding PropertyName}" Width="*">
+                        <DataGridTextColumn Binding="{Binding Status}" Width="1*">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
-                                    <Setter Property="Foreground" Value="{StaticResource SecondaryText}"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=DataGridRow}}" Value="True">
-                                            <Setter Property="Foreground" Value="White"/>
-                                            <Setter Property="FontWeight" Value="Bold"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </DataGridTextColumn.ElementStyle>
-                        </DataGridTextColumn>
-
-                        <DataGridTextColumn Binding="{Binding Status}" Width="50">
-                            <DataGridTextColumn.ElementStyle>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="TextAlignment" Value="Center"/>
-                                    <Setter Property="Foreground" Value="{StaticResource AccentColor}"/>
+                                    <Setter Property="HorizontalAlignment" Value="Center"/>
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
                                     <Setter Property="FontWeight" Value="Bold"/>
+                                    <Setter Property="Foreground" Value="{StaticResource AccentColor}"/>
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding Status}" Value="불량">
                                             <Setter Property="Foreground" Value="#FF5252"/>
                                         </DataTrigger>
-                                        <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=DataGridRow}}" Value="True">
-                                            <Setter Property="Foreground" Value="White"/>
-                                        </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
                             </DataGridTextColumn.ElementStyle>
                         </DataGridTextColumn>
+
+                        <DataGridTemplateColumn Width="1*">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Button Content="보기" 
+                                            Command="{Binding DataContext.OpenDetailCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" 
+                                            CommandParameter="{Binding}"
+                                            Width="50" Height="26" Background="#3A3A4A" Foreground="White" BorderThickness="0">
+                                        <Button.Resources>
+                                            <Style TargetType="Border">
+                                                <Setter Property="CornerRadius" Value="4"/>
+                                            </Style>
+                                        </Button.Resources>
+                                    </Button>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
                     </DataGrid.Columns>
                 </DataGrid>
             </Grid>
         </Border>
-
-        <Grid Grid.Column="1">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
-
-            <Border Grid.Row="0" Style="{StaticResource PanelStyle}" Margin="0,0,0,5">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="40"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-
-                    <Border Grid.Row="0" Background="#3A3A4A" CornerRadius="8,8,0,0" Padding="15,0">
-                        <TextBlock Text="상 - 이미지 분석" Foreground="{StaticResource PrimaryText}" FontWeight="Bold" VerticalAlignment="Center"/>
-                    </Border>
-
-                    <Grid Grid.Row="1" Margin="20">
-                        <Path Data="{Binding GraphPathTop1}" Stroke="Orange" StrokeThickness="3" Stretch="Fill">
-                            <Path.Effect>
-                                <DropShadowEffect Color="Orange" BlurRadius="10" Opacity="0.4"/>
-                            </Path.Effect>
-                        </Path>
-                        <Path Data="{Binding GraphPathTop2}" Stroke="{StaticResource AccentColor}" StrokeThickness="3" Stretch="Fill">
-                            <Path.Effect>
-                                <DropShadowEffect Color="#00C1D4" BlurRadius="10" Opacity="0.4"/>
-                            </Path.Effect>
-                        </Path>
-
-                        <StackPanel HorizontalAlignment="Right" VerticalAlignment="Top" Orientation="Horizontal">
-                            <Rectangle Width="10" Height="10" Fill="Orange" Margin="0,0,5,0"/>
-                            <TextBlock Text="계열 1" Foreground="{StaticResource SecondaryText}" Margin="0,0,10,0" FontSize="12"/>
-                            <Rectangle Width="10" Height="10" Fill="{StaticResource AccentColor}"/>
-                            <TextBlock Text="계열 2" Foreground="{StaticResource SecondaryText}" Margin="5,0,0,0" FontSize="12"/>
-                        </StackPanel>
-                    </Grid>
-                </Grid>
-            </Border>
-
-            <Border Grid.Row="1" Style="{StaticResource PanelStyle}" Margin="0,5,0,0">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="40"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-
-                    <Border Grid.Row="0" Background="#3A3A4A" CornerRadius="8,8,0,0" Padding="15,0">
-                        <TextBlock Text="하 - 이미지 분석" Foreground="{StaticResource PrimaryText}" FontWeight="Bold" VerticalAlignment="Center"/>
-                    </Border>
-
-                    <Grid Grid.Row="1" Margin="20">
-                        <Path Data="{Binding GraphPathBottom}" Stroke="#B0B0B0" StrokeThickness="3" Stretch="Fill"/>
-
-                        <StackPanel HorizontalAlignment="Right" VerticalAlignment="Top" Orientation="Horizontal">
-                            <Rectangle Width="10" Height="10" Fill="#B0B0B0" Margin="0,0,5,0"/>
-                            <TextBlock Text="계열 3" Foreground="{StaticResource SecondaryText}" FontSize="12"/>
-                        </StackPanel>
-                    </Grid>
-                </Grid>
-            </Border>
-        </Grid>
     </Grid>
 </UserControl>

@@ -1,13 +1,17 @@
 ﻿using System;
 using System.Collections.ObjectModel;
+using System.IO; // [필수] MemoryStream 사용을 위해 추가
 using System.Threading.Tasks;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
-using AMPManager.Core; // [필수] DatabaseManager가 여기 들어있습니다.
+using AMPManager.Core;
+using AMPManager.Model;
+using Newtonsoft.Json;
 using OpenCvSharp;
 using OpenCvSharp.WpfExtensions;
 using OxyPlot;
+using OxyPlot.Axes;
 using OxyPlot.Series;
 
 namespace AMPManager.ViewModel
@@ -16,14 +20,12 @@ namespace AMPManager.ViewModel
     {
         private DispatcherTimer _timer;
         private ApiService _apiService = new ApiService();
+        private DatabaseManager _dbManager = new DatabaseManager();
+        private MqttService _mqttService = new MqttService();
         private bool _isCameraRunning = false;
 
-        // [추가 1] DB 매니저 생성 (이 친구가 저장을 담당합니다)
-        private DatabaseManager _dbManager = new DatabaseManager();
-
-        // --- 원형 그래프 모델 ---
-        public PlotModel WorkPieModel { get; private set; }
-        public PlotModel DefectPieModel { get; private set; }
+        // --- 통합 그래프 모델 ---
+        public PlotModel CombinedChartModel { get; private set; }
 
         // --- 카메라 객체 ---
         private VideoCapture? _capture1;
@@ -38,132 +40,227 @@ namespace AMPManager.ViewModel
         private int _allocationCount = 1000;
         private int _currentComplete = 0;
         private double _defectRate = 0;
+        private int _defectCount = 0;
 
-        public double AllocationPercent => _allocationCount == 0 ? 0.0 : (double)_currentComplete / _allocationCount * 100.0;
-
-        public int AllocationCount
-        {
-            get => _allocationCount;
-            set { if (SetProperty(ref _allocationCount, value)) UpdateCharts(); }
-        }
-
-        public int CurrentComplete
-        {
-            get => _currentComplete;
-            set
-            {
-                if (SetProperty(ref _currentComplete, value))
-                {
-                    OnPropertyChanged(nameof(AllocationPercent));
-                    UpdateCharts();
-                }
-            }
-        }
-
-        public double DefectRate
-        {
-            get => _defectRate;
-            set { if (SetProperty(ref _defectRate, value)) UpdateCharts(); }
-        }
-
-        public ObservableCollection<string> TimestampList { get; } = new ObservableCollection<string>();
-        public ObservableCollection<string> DefectMessageList { get; } = new ObservableCollection<string>();
+        // 불량 개수 (화면 표시용)
+        public int DefectCount { get => _defectCount; set => SetProperty(ref _defectCount, value); }
+        public int AllocationCount { get => _allocationCount; set => SetProperty(ref _allocationCount, value); }
+        public int CurrentComplete { get => _currentComplete; set => SetProperty(ref _currentComplete, value); }
+        public double DefectRate { get => _defectRate; set => SetProperty(ref _defectRate, value); }
 
         public HomeViewModel()
         {
-            // 1. 차트 초기화
-            WorkPieModel = CreateDonutModel();
-            DefectPieModel = CreateDonutModel();
+            // 1. 통합 그래프 초기화
+            InitializeCombinedChart();
 
-            // 2. 초기 데이터 설정
-            UpdateCharts();
-
-            // 3. 타이머
+            // 2. 타이머 설정 (0.5초 간격)
             _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
             _timer.Tick += Timer_Tick;
+
             InitializeCamerasAsync();
+
+            // MQTT 메시지 수신 이벤트 연결
+            _mqttService.MessageReceived += OnMqttDataReceived;
         }
 
-        private PlotModel CreateDonutModel()
+        private void InitializeCombinedChart()
         {
-            var model = new PlotModel { Title = null };
-            model.Background = OxyColors.Transparent;
-            model.PlotAreaBorderColor = OxyColors.Transparent;
+            var textColor = OxyColor.Parse("#E0E0E0");
+            var gridColor = OxyColor.Parse("#4A4A5A");
 
-            var series = new PieSeries
+            CombinedChartModel = new PlotModel { Title = "" };
+            CombinedChartModel.Background = OxyColors.Transparent;
+            CombinedChartModel.PlotAreaBorderColor = OxyColors.Transparent;
+            CombinedChartModel.TextColor = textColor;
+
+            // X축 (시간)
+            CombinedChartModel.Axes.Add(new DateTimeAxis
             {
-                StrokeThickness = 0,
-                AngleSpan = 360,
-                StartAngle = -90,
-                InnerDiameter = 0.6,
-                OutsideLabelFormat = null,
-                InsideLabelFormat = null,
-                TickHorizontalLength = 0,
-                TickRadialLength = 0
-            };
+                Position = AxisPosition.Bottom,
+                StringFormat = "HH:mm:ss",
+                AxislineColor = gridColor,
+                TicklineColor = gridColor,
+                TextColor = textColor,
+                MajorGridlineStyle = LineStyle.Dot,
+                MajorGridlineColor = gridColor
+            });
 
-            model.Series.Add(series);
-            return model;
+            // Y축 1 (왼쪽): 검사량 (Count)
+            CombinedChartModel.Axes.Add(new LinearAxis
+            {
+                Position = AxisPosition.Left,
+                Key = "CountAxis", // 왼쪽 축 식별자
+                Title = "검사량",
+                AxislineColor = OxyColor.Parse("#00C1D4"), // 민트색
+                TextColor = OxyColor.Parse("#00C1D4"),
+                Minimum = 0
+            });
+
+            // Y축 2 (오른쪽): 불량 개수 (Count)
+            CombinedChartModel.Axes.Add(new LinearAxis
+            {
+                Position = AxisPosition.Right,
+                Key = "DefectAxis", // 오른쪽 축 식별자
+                Title = "불량 개수",
+                AxislineColor = OxyColor.Parse("#FF5252"), // 빨간색
+                TextColor = OxyColor.Parse("#FF5252"),
+                Minimum = 0
+            });
+
+            // 시리즈 1: 검사량 (민트색 선, 왼쪽 축 사용)
+            CombinedChartModel.Series.Add(new LineSeries
+            {
+                Title = "검사량",
+                Color = OxyColor.Parse("#00C1D4"),
+                StrokeThickness = 2,
+                YAxisKey = "CountAxis"
+            });
+
+            // 시리즈 2: 불량 개수 (빨간색 선, 오른쪽 축 사용)
+            CombinedChartModel.Series.Add(new LineSeries
+            {
+                Title = "불량 개수",
+                Color = OxyColor.Parse("#FF5252"),
+                StrokeThickness = 2,
+                YAxisKey = "DefectAxis"
+            });
         }
 
-        private void UpdateCharts()
+        private void UpdateChartData()
         {
-            // 1. 작업 진행률 갱신
-            if (WorkPieModel.Series.Count > 0 && WorkPieModel.Series[0] is PieSeries workSeries)
+            DateTime now = DateTime.Now;
+
+            // 1. 검사량 그래프 갱신
+            if (CombinedChartModel.Series[0] is LineSeries countSeries)
             {
-                workSeries.Slices.Clear();
-                double remaining = Math.Max(0, AllocationCount - CurrentComplete);
-
-                // 완료 (민트색), 잔여 (회색)
-                workSeries.Slices.Add(new PieSlice("완료", CurrentComplete) { Fill = OxyColor.Parse("#00C1D4") });
-                workSeries.Slices.Add(new PieSlice("잔여", remaining) { Fill = OxyColor.Parse("#404050") });
-
-                WorkPieModel.InvalidatePlot(true);
+                countSeries.Points.Add(new DataPoint(DateTimeAxis.ToDouble(now), CurrentComplete));
+                // 데이터가 너무 많아지지 않게 최근 50개만 유지
+                if (countSeries.Points.Count > 50) countSeries.Points.RemoveAt(0);
             }
 
-            // 2. 불량률 갱신
-            if (DefectPieModel.Series.Count > 0 && DefectPieModel.Series[0] is PieSeries defectSeries)
+            // 2. 불량 개수 그래프 갱신
+            if (CombinedChartModel.Series[1] is LineSeries defectSeries)
             {
-                defectSeries.Slices.Clear();
+                defectSeries.Points.Add(new DataPoint(DateTimeAxis.ToDouble(now), DefectCount));
+                if (defectSeries.Points.Count > 50) defectSeries.Points.RemoveAt(0);
+            }
 
-                // 0~100 사이로 값 제한
-                double safeDefectRate = Math.Max(0.0, Math.Min(100.0, DefectRate));
-                double normalRate = 100.0 - safeDefectRate;
+            CombinedChartModel.InvalidatePlot(true);
+        }
 
-                // 불량 (빨간색)
-                defectSeries.Slices.Add(new PieSlice("불량", safeDefectRate) { Fill = OxyColor.Parse("#FF5252") });
+        // [추가] 이미지 소스를 바이트 배열로 변환하는 함수
+        private byte[]? ImageToByte(ImageSource? img)
+        {
+            if (img is WriteableBitmap wb)
+            {
+                try
+                {
+                    using (MemoryStream ms = new MemoryStream())
+                    {
+                        JpegBitmapEncoder encoder = new JpegBitmapEncoder();
+                        encoder.Frames.Add(BitmapFrame.Create(wb));
+                        encoder.Save(ms);
+                        return ms.ToArray();
+                    }
+                }
+                catch { return null; }
+            }
+            return null;
+        }
 
-                // 정상 (회색)
-                defectSeries.Slices.Add(new PieSlice("정상", normalRate) { Fill = OxyColor.Parse("#404050") });
+        // 실제 MQTT 데이터 수신 시 처리
+        private void OnMqttDataReceived(string jsonPayload)
+        {
+            System.Windows.Application.Current.Dispatcher.Invoke(() =>
+            {
+                try
+                {
+                    dynamic data = JsonConvert.DeserializeObject(jsonPayload);
+                    int pid = data.pid;
+                    string resultStr = data.result;
+                    bool isDefect = (resultStr == "NG");
 
-                DefectPieModel.InvalidatePlot(true);
+                    string nowTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+
+                    // [수정] 현재 카메라 화면을 캡처해서 저장
+                    byte[]? img1Data = ImageToByte(CameraImage1);
+                    byte[]? img2Data = ImageToByte(CameraImage2);
+
+                    // DB 저장 (이미지 포함)
+                    _dbManager.InsertMeasurement(pid, nowTime, isDefect, img1Data, img2Data);
+
+                    // 화면 수치 갱신
+                    CurrentComplete++;
+                    if (isDefect) DefectCount++;
+
+                    // 불량률 계산
+                    if (CurrentComplete > 0)
+                    {
+                        DefectRate = (double)DefectCount / CurrentComplete * 100.0;
+                    }
+                }
+                catch { }
+            });
+        }
+
+        public async void StartSimulation()
+        {
+            if (!_timer.IsEnabled)
+            {
+                // MQTT 연결 및 시작 명령
+                await _mqttService.ConnectAsync();
+                await _mqttService.SendCommandAsync("START");
+
+                // 타이머 및 카메라 시작
+                _timer.Start();
+                _isCameraRunning = true;
+                RunCameraLoop(_capture1, () => CameraImage1, img => CameraImage1 = img);
+                RunCameraLoop(_capture2, () => CameraImage2, img => CameraImage2 = img);
+            }
+        }
+
+        public async void StopSimulation()
+        {
+            if (_timer.IsEnabled)
+            {
+                await _mqttService.SendCommandAsync("STOP");
+                _timer.Stop();
+                _isCameraRunning = false;
             }
         }
 
         private async void Timer_Tick(object? sender, EventArgs e)
         {
-            // [추가 2] 가짜 저장 로직
-            // 현재 시간이 5초 단위(0초, 5초, 10초...)일 때마다 DB에 저장합니다.
-            // 나중에 알고리즘이 완성되면 이 코드를 지우고, 진짜 판정 결과가 나왔을 때 InsertMeasurement를 호출하면 됩니다.
-            if (DateTime.Now.Second % 5 == 0)
+            // [테스트용] 더미 데이터 생성 (나중에 실제 장비 연결 시 이 if문 블록 삭제)
+            if (true)
             {
-                // 제품ID 1번(M6 Bolt), 현재시간 저장
-                _dbManager.InsertMeasurement(1, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
-                System.Diagnostics.Debug.WriteLine("DB에 자동 저장됨!");
+                // 1. 랜덤 불량 여부 (20% 확률)
+                bool isBad = new Random().Next(0, 10) < 2;
+                int randomPid = new Random().Next(1, 4);
+
+                // 2. DB 저장 [수정됨: 이미지 포함]
+                string nowTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+
+                // 현재 카메라 화면 캡처
+                byte[]? img1Data = ImageToByte(CameraImage1);
+                byte[]? img2Data = ImageToByte(CameraImage2);
+
+                _dbManager.InsertMeasurement(randomPid, nowTime, isBad, img1Data, img2Data);
+
+                // 3. 화면 값 갱신
+                CurrentComplete++;
+                if (isBad) DefectCount++;
+
+                if (CurrentComplete > 0)
+                {
+                    DefectRate = (double)DefectCount / CurrentComplete * 100.0;
+                }
             }
 
-            var data = await _apiService.GetStatusAsync();
-            if (data != null)
-            {
-                AllocationCount = data.AllocationCount;
-                CurrentComplete = data.CurrentComplete;
-                DefectRate = data.DefectRate;
+            // 그래프 업데이트
+            UpdateChartData();
 
-                TimestampList.Clear();
-                foreach (var log in data.Logs) TimestampList.Add(log);
-            }
-
-            // 캡처 로직
+            // 카메라 캡처 및 전송 로직 (기존 유지)
             try
             {
                 var window = System.Windows.Application.Current.MainWindow;
@@ -183,9 +280,6 @@ namespace AMPManager.ViewModel
             }
             catch { }
         }
-
-        public void StartSimulation() { if (!_timer.IsEnabled) { _timer.Start(); _isCameraRunning = true; RunCameraLoop(_capture1, () => CameraImage1, img => CameraImage1 = img); RunCameraLoop(_capture2, () => CameraImage2, img => CameraImage2 = img); } }
-        public void StopSimulation() { if (_timer.IsEnabled) { _timer.Stop(); _isCameraRunning = false; } }
 
         private async void InitializeCamerasAsync() { await Task.Run(() => { try { _capture1 = new VideoCapture(0, VideoCaptureAPIs.DSHOW); _capture2 = new VideoCapture(1, VideoCaptureAPIs.DSHOW); } catch { } }); }
 
