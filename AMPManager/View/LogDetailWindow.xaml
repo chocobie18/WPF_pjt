@@ -1,7 +1,7 @@
 ﻿<Window x:Class="AMPManager.View.LogDetailWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="상세 정보" Height="960" Width="720"
+        Title="상세 정보" Height="960" Width="800"
         WindowStartupLocation="CenterOwner"
         Background="#1E1E2D">
 
@@ -19,7 +19,7 @@
             </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/> 
             </Grid.ColumnDefinitions>
 
             <Grid.Resources>
