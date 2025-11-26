@@ -49,28 +49,28 @@
 
             <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource PanelStyle}" Margin="0,0,5,5" Background="#3F51B5">
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                    <TextBlock Text="평균 넓이 (Width)" Foreground="#B0C4DE" FontSize="14" HorizontalAlignment="Center"/>
+                    <TextBlock Text="외곽선 불량" Foreground="#B0C4DE" FontSize="14" HorizontalAlignment="Center"/>
                     <TextBlock Text="{Binding AvgWidth}" Foreground="White" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,5,0,0"/>
                 </StackPanel>
             </Border>
 
             <Border Grid.Row="0" Grid.Column="1" Style="{StaticResource PanelStyle}" Margin="5,0,0,5" Background="#2E7D32">
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                    <TextBlock Text="평균 길이 (Length)" Foreground="#A5D6A7" FontSize="14" HorizontalAlignment="Center"/>
+                    <TextBlock Text="무게중심 불량" Foreground="#A5D6A7" FontSize="14" HorizontalAlignment="Center"/>
                     <TextBlock Text="{Binding AvgLength}" Foreground="White" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,5,0,0"/>
                 </StackPanel>
             </Border>
 
             <Border Grid.Row="1" Grid.Column="0" Style="{StaticResource PanelStyle}" Margin="0,5,5,0" Background="#263238">
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                    <TextBlock Text="평균 외곽선 (Contour)" Foreground="#90A4AE" FontSize="14" HorizontalAlignment="Center"/>
+                    <TextBlock Text="녹 불량" Foreground="#90A4AE" FontSize="14" HorizontalAlignment="Center"/>
                     <TextBlock Text="{Binding AvgContour}" Foreground="White" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,5,0,0"/>
                 </StackPanel>
             </Border>
 
             <Border Grid.Row="1" Grid.Column="1" Style="{StaticResource PanelStyle}" Margin="5,5,0,0" Background="#37474F">
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                    <TextBlock Text="평균 무게중심 (Center)" Foreground="#90A4AE" FontSize="14" HorizontalAlignment="Center"/>
+                    <TextBlock Text="스크래치 불량" Foreground="#90A4AE" FontSize="14" HorizontalAlignment="Center"/>
                     <TextBlock Text="{Binding AvgCenter}" Foreground="White" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,5,0,0"/>
                 </StackPanel>
             </Border>
