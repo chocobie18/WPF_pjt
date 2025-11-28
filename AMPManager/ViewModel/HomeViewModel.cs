@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.ObjectModel;
-using System.IO; // [필수] MemoryStream 사용
+using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using System.Windows.Input; // [필수] ICommand 사용을 위해 추가
 using AMPManager.Core;
 using AMPManager.Model;
 using Newtonsoft.Json;
@@ -23,7 +24,7 @@ namespace AMPManager.ViewModel
         private DatabaseManager _dbManager = new DatabaseManager();
         private MqttService _mqttService = new MqttService();
 
-        // [수정] 웹소켓 서비스 2개 생성 (카메라 2대용)
+        // 웹소켓 영상 서비스 (카메라 2대용)
         private WebSocketImageService _wsService1 = new WebSocketImageService();
         private WebSocketImageService _wsService2 = new WebSocketImageService();
 
@@ -33,10 +34,8 @@ namespace AMPManager.ViewModel
         public PlotModel CombinedChartModel { get; private set; }
 
         // --- 카메라 객체 ---
-        // (로컬 카메라는 웹소켓 사용 시 안 쓰지만 변수는 남겨둠)
         private VideoCapture? _capture1;
         private VideoCapture? _capture2;
-
         private ImageSource? _cameraImage1;
         private ImageSource? _cameraImage2;
 
@@ -54,6 +53,9 @@ namespace AMPManager.ViewModel
         public int CurrentComplete { get => _currentComplete; set => SetProperty(ref _currentComplete, value); }
         public double DefectRate { get => _defectRate; set => SetProperty(ref _defectRate, value); }
 
+        // [추가] 테스트 버튼 명령어
+        public ICommand TestCommand { get; }
+
         public HomeViewModel()
         {
             // 1. 차트 초기화
@@ -63,17 +65,26 @@ namespace AMPManager.ViewModel
             _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
             _timer.Tick += Timer_Tick;
 
-            InitializeCamerasAsync(); // (로컬 카메라 초기화 - 필요 없으면 주석 가능)
+            InitializeCamerasAsync();
 
             // MQTT 수신 연결
             _mqttService.MessageReceived += OnMqttDataReceived;
 
-            // [수정] 웹소켓 영상 수신 연결 (각각 다른 함수 연결)
+            // 웹소켓 영상 수신 연결
             _wsService1.OnImageReceived += HandleImage1;
             _wsService2.OnImageReceived += HandleImage2;
+
+            // [추가] 테스트 버튼 명령 구현
+            TestCommand = new RelayCommand(async o =>
+            {
+                // 연결이 안 되어 있다면 연결 시도
+                await _mqttService.ConnectAsync();
+                // 테스트 신호 "1" 전송 (MqttService에 추가한 함수 호출)
+                await _mqttService.SendTestSignal();
+            });
         }
 
-        // [추가] CAM 1 처리 함수
+        // CAM 1 처리 함수
         private void HandleImage1(byte[] data)
         {
             System.Windows.Application.Current.Dispatcher.Invoke(() =>
@@ -82,7 +93,7 @@ namespace AMPManager.ViewModel
             });
         }
 
-        // [추가] CAM 2 처리 함수
+        // CAM 2 처리 함수
         private void HandleImage2(byte[] data)
         {
             System.Windows.Application.Current.Dispatcher.Invoke(() =>
@@ -91,7 +102,6 @@ namespace AMPManager.ViewModel
             });
         }
 
-        // (공통) 바이트 배열 -> 이미지 변환 헬퍼
         private BitmapImage? ByteToBitmapImage(byte[] data)
         {
             try
@@ -111,18 +121,10 @@ namespace AMPManager.ViewModel
             catch { return null; }
         }
 
-        // (공통) 이미지 -> 바이트 배열 변환 헬퍼 (DB 저장용)
+        // DB 저장용 이미지 변환
         private byte[]? ImageToByte(ImageSource? img)
         {
-            if (img is BitmapImage bi) // 웹소켓 이미지는 BitmapImage
-            {
-                // BitmapImage는 원본 스트림이 닫혀있을 수 있어 다시 인코딩 필요
-                // 하지만 성능상 받은 byte[]를 그대로 쓰는게 좋음. 
-                // 여기선 편의상 화면 캡처 방식 대신 MQTT 수신 시점의 이미지를 쓴다고 가정.
-                // (간단하게 구현하기 위해 아래 방식 사용)
-                return null; // 실제 구현 시엔 원본 byte[]를 캐싱해두는 게 좋음
-            }
-            if (img is WriteableBitmap wb) // 로컬 카메라는 WriteableBitmap
+            if (img is WriteableBitmap wb)
             {
                 try
                 {
@@ -139,7 +141,6 @@ namespace AMPManager.ViewModel
             return null;
         }
 
-        // 그래프 초기화 (기존 코드 유지)
         private void InitializeCombinedChart()
         {
             var textColor = OxyColor.Parse("#E0E0E0");
@@ -186,11 +187,8 @@ namespace AMPManager.ViewModel
                     bool isDefect = (resultStr == "NG");
                     string nowTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
 
-                    // (주의) 웹소켓 이미지를 다시 바이트로 바꾸는건 비효율적일 수 있어
-                    // 일단은 null로 저장하거나, 별도 변수에 저장해둔 최신 이미지를 써야 합니다.
-                    // 여기선 편의상 생략 (null 저장)
-                    byte[]? img1Data = null;
-                    byte[]? img2Data = null;
+                    byte[]? img1Data = ImageToByte(CameraImage1); // (로컬캡처용)
+                    byte[]? img2Data = ImageToByte(CameraImage2);
 
                     _dbManager.InsertMeasurement(pid, nowTime, isDefect, img1Data, img2Data);
 
@@ -209,10 +207,8 @@ namespace AMPManager.ViewModel
                 await _mqttService.ConnectAsync();
                 await _mqttService.SendCommandAsync("START");
 
-                // [수정] 메인 PC IP 주소로 2개 연결 (8765, 8766)
-                // ★ 여기에 메인 PC IP를 꼭 적으세요! (예: 192.168.0.10)
+                // 메인 PC IP 주소 (본인 환경에 맞게 수정 필요)
                 string mainPcIp = "192.168.0.88";
-
                 await _wsService1.ConnectAsync($"ws://{mainPcIp}:8765");
                 await _wsService2.ConnectAsync($"ws://{mainPcIp}:8766");
 
@@ -225,11 +221,8 @@ namespace AMPManager.ViewModel
             if (_timer.IsEnabled)
             {
                 await _mqttService.SendCommandAsync("STOP");
-
-                // [수정] 둘 다 연결 종료
                 await _wsService1.DisconnectAsync();
                 await _wsService2.DisconnectAsync();
-
                 _timer.Stop();
             }
         }
@@ -257,7 +250,6 @@ namespace AMPManager.ViewModel
 
         private async void RunCameraLoop(VideoCapture? capture, Func<ImageSource?> getImage, Action<ImageSource?> updateImage)
         {
-            // 로컬 카메라 로직 (웹소켓 사용 시 작동 안 함)
             if (capture == null || !capture.IsOpened()) return;
             await Task.Run(() => {
                 using var frame = new Mat();

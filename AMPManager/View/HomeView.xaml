@@ -23,7 +23,11 @@
             <Border Grid.Column="0" Style="{StaticResource PanelStyle}" Margin="0,0,5,0">
                 <Grid>
                     <Image Source="{Binding CameraImage1}" Stretch="Uniform"/>
-                    <TextBlock Text="CAM 1 (OFF)" Foreground="{StaticResource SecondaryText}" FontSize="32" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center">
+
+                    <TextBlock Text="CAM 1 (OFF)" 
+                               Foreground="{StaticResource SecondaryText}" 
+                               FontSize="32" FontWeight="SemiBold"
+                               HorizontalAlignment="Center" VerticalAlignment="Center">
                         <TextBlock.Style>
                             <Style TargetType="TextBlock">
                                 <Setter Property="Visibility" Value="Collapsed"/>
@@ -35,13 +39,27 @@
                             </Style>
                         </TextBlock.Style>
                     </TextBlock>
+
+                    <Button Content="TEST(1)" Command="{Binding TestCommand}" 
+                            HorizontalAlignment="Left" VerticalAlignment="Top" 
+                            Width="70" Height="30" Margin="10"
+                            Background="#FF5252" Foreground="White" FontWeight="Bold" BorderThickness="0">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="5"/>
+                            </Style>
+                        </Button.Resources>
+                    </Button>
                 </Grid>
             </Border>
 
             <Border Grid.Column="1" Style="{StaticResource PanelStyle}" Margin="5,0,0,0">
                 <Grid>
                     <Image Source="{Binding CameraImage2}" Stretch="Uniform"/>
-                    <TextBlock Text="CAM 2 (OFF)" Foreground="{StaticResource SecondaryText}" FontSize="32" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBlock Text="CAM 2 (OFF)" 
+                               Foreground="{StaticResource SecondaryText}" 
+                               FontSize="32" FontWeight="SemiBold"
+                               HorizontalAlignment="Center" VerticalAlignment="Center">
                         <TextBlock.Style>
                             <Style TargetType="TextBlock">
                                 <Setter Property="Visibility" Value="Collapsed"/>

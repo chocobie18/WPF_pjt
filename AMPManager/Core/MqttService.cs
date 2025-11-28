@@ -15,7 +15,7 @@ namespace AMPManager.Core
         public event Action<string> MessageReceived;
 
         // ★ 브로커 주소 (라즈베리파이 IP나 localhost)
-        private const string BrokerIp = "192.168.0.62";
+        private const string BrokerIp = "192.168.0.31";
         private const int BrokerPort = 1883;
 
         // ★ 토픽 정의
@@ -70,6 +70,15 @@ namespace AMPManager.Core
             System.Diagnostics.Debug.WriteLine($"명령 전송: {command}");
         }
 
+        public async Task SendTestSignal()
+        {
+            if (!_mqttClient.IsConnected) return;
+
+            // 기존 SendCommandAsync를 재활용해서 "1"을 보냅니다.
+            await SendCommandAsync("1");
+            System.Diagnostics.Debug.WriteLine(">>> [테스트] 신호 '1' 전송함");
+        }
+
         // 4. 메시지 받았을 때 처리 (내부용)
         private Task HandleMessageAsync(MqttApplicationMessageReceivedEventArgs e)
         {
@@ -94,4 +103,5 @@ namespace AMPManager.Core
             }
         }
     }
+
 }
