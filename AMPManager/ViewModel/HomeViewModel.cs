@@ -28,14 +28,10 @@ namespace AMPManager.ViewModel
         private WebSocketImageService _wsService1 = new WebSocketImageService();
         private WebSocketImageService _wsService2 = new WebSocketImageService();
 
-        private bool _isCameraRunning = false;
-
         // --- 통합 그래프 모델 ---
         public PlotModel CombinedChartModel { get; private set; }
 
         // --- 카메라 객체 ---
-        private VideoCapture? _capture1;
-        private VideoCapture? _capture2;
         private ImageSource? _cameraImage1;
         private ImageSource? _cameraImage2;
 
@@ -64,8 +60,6 @@ namespace AMPManager.ViewModel
             // 2. 타이머 설정
             _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
             _timer.Tick += Timer_Tick;
-
-            InitializeCamerasAsync();
 
             // MQTT 수신 연결
             _mqttService.MessageReceived += OnMqttDataReceived;
@@ -200,12 +194,15 @@ namespace AMPManager.ViewModel
             });
         }
 
-        public async void StartSimulation()
+        // [수정] StartSimulation -> StartSystem으로 함수명 변경 및 명령 변경 (WPF의 [시스템 시작] 버튼)
+        public async void StartSystem()
         {
             if (!_timer.IsEnabled)
             {
                 await _mqttService.ConnectAsync();
-                await _mqttService.SendCommandAsync("START");
+
+                // ★ MQTT 명령을 "RESET"으로 변경: 아두이노의 재가동 로직을 호출
+                await _mqttService.SendCommandAsync("RESET");
 
                 // 메인 PC IP 주소 (본인 환경에 맞게 수정 필요)
                 string mainPcIp = "192.168.0.88";
@@ -213,6 +210,21 @@ namespace AMPManager.ViewModel
                 await _wsService2.ConnectAsync($"ws://{mainPcIp}:8766");
 
                 _timer.Start();
+            }
+        }
+
+        // [추가] 시스템 재가동 (WPF의 [재가동] 버튼)
+        public async void RestartSystem()
+        {
+            // 시스템이 정지 상태(타이머 비활성화)면 StartSystem을 호출하여 전체 재시작합니다.
+            if (!_timer.IsEnabled)
+            {
+                StartSystem();
+            }
+            // 시스템이 이미 실행 중일 경우, 하드웨어에 RESET 명령만 다시 보내 재가동을 요청합니다.
+            else
+            {
+                await _mqttService.SendCommandAsync("RESET");
             }
         }
 
@@ -244,34 +256,6 @@ namespace AMPManager.ViewModel
             }
 
             UpdateChartData();
-        }
-
-        private async void InitializeCamerasAsync() { await Task.Run(() => { try { _capture1 = new VideoCapture(0, VideoCaptureAPIs.DSHOW); _capture2 = new VideoCapture(1, VideoCaptureAPIs.DSHOW); } catch { } }); }
-
-        private async void RunCameraLoop(VideoCapture? capture, Func<ImageSource?> getImage, Action<ImageSource?> updateImage)
-        {
-            if (capture == null || !capture.IsOpened()) return;
-            await Task.Run(() => {
-                using var frame = new Mat();
-                while (_isCameraRunning)
-                {
-                    try
-                    {
-                        capture.Read(frame);
-                        if (!frame.Empty())
-                        {
-                            System.Windows.Application.Current.Dispatcher.Invoke(() => {
-                                var wb = getImage() as WriteableBitmap;
-                                if (wb == null || wb.PixelWidth != frame.Width || wb.PixelHeight != frame.Height) updateImage(frame.ToWriteableBitmap());
-                                else WriteableBitmapConverter.ToWriteableBitmap(frame, wb);
-                            });
-                        }
-                    }
-                    catch { }
-                    System.Threading.Thread.Sleep(33);
-                }
-            });
-            System.Windows.Application.Current.Dispatcher.Invoke(() => updateImage(null));
         }
     }
 }

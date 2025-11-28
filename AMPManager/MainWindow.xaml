@@ -30,9 +30,15 @@
                     <Button Content="시스템 시작" Command="{Binding StartCommand}" 
                             Width="100" Height="36" Background="{StaticResource AccentColor}" 
                             Foreground="White" BorderThickness="0" FontWeight="Bold" Margin="0,0,10,0"/>
+
+                    <Button Content="재가동" Command="{Binding RestartCommand}" 
+                            Width="100" Height="36" Background="#FFC107" 
+                            Foreground="White" BorderThickness="0" FontWeight="Bold" Margin="0,0,10,0"/>
+
                     <Button Content="정지" Command="{Binding StopCommand}" 
                             Width="100" Height="36" Background="#E53935" 
-                            Foreground="White" BorderThickness="0" FontWeight="Bold"/>
+                            Foreground="White" 
+                            BorderThickness="0" FontWeight="Bold"/>
                 </StackPanel>
             </DockPanel>
         </Border>

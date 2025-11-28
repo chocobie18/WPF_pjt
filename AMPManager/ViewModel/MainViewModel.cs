@@ -12,6 +12,7 @@ namespace AMPManager.ViewModel
         public ICommand NavigateCommand { get; }
         public ICommand StartCommand { get; }
         public ICommand StopCommand { get; }
+        public ICommand RestartCommand { get; } // ★ 추가: 재가동 커맨드
 
         public BaseViewModel? CurrentViewModel
         {
@@ -39,8 +40,26 @@ namespace AMPManager.ViewModel
                 if (o is string p && _viewModels.ContainsKey(p)) CurrentViewModel = _viewModels[p];
             });
 
-            // ... (StartCommand, StopCommand 기존 코드 유지) ...
-            StartCommand = new RelayCommand(o => { if (_viewModels["Main"] is HomeViewModel home) { home.StartSimulation(); CurrentViewModel = home; } });
+            // ★ 수정: StartCommand는 이제 StartSystem()을 호출합니다.
+            StartCommand = new RelayCommand(o =>
+            {
+                if (_viewModels["Main"] is HomeViewModel home)
+                {
+                    home.StartSystem();
+                    CurrentViewModel = home;
+                }
+            });
+
+            // ★ 추가: RestartCommand는 RestartSystem()을 호출합니다.
+            RestartCommand = new RelayCommand(o =>
+            {
+                if (_viewModels["Main"] is HomeViewModel home)
+                {
+                    home.RestartSystem();
+                }
+            });
+
+            // StopCommand는 유지
             StopCommand = new RelayCommand(o => { if (_viewModels["Main"] is HomeViewModel home) home.StopSimulation(); });
 
             CurrentViewModel = _viewModels["Main"];
