@@ -9,41 +9,36 @@ namespace AMPManager.ViewModel
 {
     public class LoginViewModel : ObservableObject
     {
-        private DatabaseManager _dbManager = new DatabaseManager();
+        private ApiService _apiService = new ApiService();
 
-        // 입력된 아이디
         private string _inputId = "";
         public string InputId { get => _inputId; set => SetProperty(ref _inputId, value); }
 
-        // 로그인 결과 (성공한 유저 정보)
         public User? LoggedInUser { get; private set; }
-
-        // 로그인 버튼 명령
         public ICommand LoginCommand { get; }
-
-        // 로그인 성공 시 창을 닫기 위한 Action
         public Action? CloseAction { get; set; }
 
         public LoginViewModel()
         {
-            // PasswordBox는 보안상 바인딩이 안 되므로, 파라미터로 직접 받습니다.
-            LoginCommand = new RelayCommand(o =>
+            LoginCommand = new RelayCommand(async o =>
             {
                 var passwordBox = o as PasswordBox;
                 string pw = passwordBox != null ? passwordBox.Password : "";
 
-                // 1. 로그인 시도
-                var user = _dbManager.Login(InputId, pw);
+                // [수정] API를 통한 로그인
+                bool isSuccess = await _apiService.LoginAsync(InputId, pw);
 
-                if (user != null)
+                if (isSuccess)
                 {
-                    // 성공
-                    LoggedInUser = user;
-                    CloseAction?.Invoke(); // 창 닫기 (-> 메인화면으로 이동)
+                    // 로그인 성공 (권한 등은 서버 응답에 따라 처리하거나 임시 설정)
+                    // 관리자는 id가 admin일 때 1, 아니면 2로 가정
+                    int roleId = (InputId.ToLower() == "admin") ? 1 : 2;
+                    LoggedInUser = new User("사용자", InputId, roleId);
+
+                    CloseAction?.Invoke();
                 }
                 else
                 {
-                    // 실패
                     System.Windows.MessageBox.Show("아이디 또는 비밀번호가 틀렸습니다.", "로그인 실패", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             });

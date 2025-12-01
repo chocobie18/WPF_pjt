@@ -20,11 +20,12 @@ namespace AMPManager.ViewModel
     public class HomeViewModel : BaseViewModel
     {
         private DispatcherTimer _timer;
+
+        // [수정] API 서비스 사용
         private ApiService _apiService = new ApiService();
         private DatabaseManager _dbManager = new DatabaseManager();
-        private MqttService _mqttService = new MqttService();
+        private MqttService _mqttService = new MqttService(); // 데이터 수신용(Listening)으로 유지
 
-        // 웹소켓 서비스 (카메라 2대용)
         private WebSocketImageService _wsService1 = new WebSocketImageService();
         private WebSocketImageService _wsService2 = new WebSocketImageService();
 
@@ -32,8 +33,6 @@ namespace AMPManager.ViewModel
 
         public PlotModel CombinedChartModel { get; private set; }
 
-        private VideoCapture? _capture1;
-        private VideoCapture? _capture2;
         private ImageSource? _cameraImage1;
         private ImageSource? _cameraImage2;
 
@@ -59,18 +58,20 @@ namespace AMPManager.ViewModel
             _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
             _timer.Tick += Timer_Tick;
 
-            // 로컬 카메라는 사용 안 함
-            InitializeCamerasAsync();
+            // 로컬 카메라 초기화 코드 삭제 (서버 영상 사용)
 
+            // 실시간 판정 결과 수신 (Server -> MQTT -> WPF)
             _mqttService.MessageReceived += OnMqttDataReceived;
+            // MQTT 연결은 데이터 수신을 위해 미리 수행
+            _ = _mqttService.ConnectAsync();
 
             _wsService1.OnImageReceived += HandleImage1;
             _wsService2.OnImageReceived += HandleImage2;
 
             TestCommand = new RelayCommand(async o =>
             {
+                // 테스트용
                 await _mqttService.ConnectAsync();
-                await _mqttService.SendTestSignal();
             });
         }
 
@@ -107,17 +108,13 @@ namespace AMPManager.ViewModel
         {
             if (img is WriteableBitmap wb)
             {
-                try
+                using (MemoryStream ms = new MemoryStream())
                 {
-                    using (MemoryStream ms = new MemoryStream())
-                    {
-                        JpegBitmapEncoder encoder = new JpegBitmapEncoder();
-                        encoder.Frames.Add(BitmapFrame.Create(wb));
-                        encoder.Save(ms);
-                        return ms.ToArray();
-                    }
+                    JpegBitmapEncoder encoder = new JpegBitmapEncoder();
+                    encoder.Frames.Add(BitmapFrame.Create(wb));
+                    encoder.Save(ms);
+                    return ms.ToArray();
                 }
-                catch { return null; }
             }
             return null;
         }
@@ -156,16 +153,20 @@ namespace AMPManager.ViewModel
             CombinedChartModel.InvalidatePlot(true);
         }
 
+        // [MQTT 수신] 서버가 보내준 판정 결과 처리
         private void OnMqttDataReceived(string jsonPayload)
         {
             System.Windows.Application.Current.Dispatcher.Invoke(() =>
             {
                 try
                 {
+                    // 서버 규격에 맞춰 파싱
                     dynamic data = JsonConvert.DeserializeObject(jsonPayload);
-                    int pid = data.pid;
-                    string resultStr = data.result;
-                    bool isDefect = (resultStr == "NG");
+                    if (data == null) return;
+
+                    int pid = (data.pid != null) ? (int)data.pid : 0;
+                    string resultStr = (string)data.result; // "OK", "NG"
+                    bool isDefect = (resultStr == "NG" || resultStr == "DEFECTIVE");
                     string nowTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
 
                     byte[]? img1Data = ImageToByte(CameraImage1);
@@ -176,63 +177,77 @@ namespace AMPManager.ViewModel
                     CurrentComplete++;
                     if (isDefect) DefectCount++;
                     if (CurrentComplete > 0) DefectRate = (double)DefectCount / CurrentComplete * 100.0;
+
+                    UpdateChartData();
                 }
                 catch { }
             });
         }
 
-        // [수정] FastAPI 서버 연결 로직 적용
+        // [수정] START: API 호출 방식
         public async void StartSimulation()
         {
             if (!_timer.IsEnabled)
             {
-                // 1. MQTT 연결 (브로커 주소는 MqttService.cs 설정을 따름)
-                await _mqttService.ConnectAsync();
-                await _mqttService.SendCommandAsync("START");
+                // 1. API 호출: /api/start
+                bool success = await _apiService.StartSystemAsync("1"); // DeviceID=1 가정
 
-                // 2. [수정] FastAPI 웹소켓 영상 연결
-                string fastApiIp = "192.168.0.7";
-                int fastApiPort = 8000;
+                if (success)
+                {
+                    // 2. CCTV 켜기: /api/CCTV (action=1)
+                    await _apiService.ControlCctvAsync("1");
 
-                // FastAPI 경로에 맞춰서 연결
-                await _wsService1.ConnectAsync($"ws://{fastApiIp}:{fastApiPort}/api/source/1");
-                await _wsService2.ConnectAsync($"ws://{fastApiIp}:{fastApiPort}/api/source/2");
+                    // 3. 웹소켓 연결 (View 모드)
+                    string fastApiIp = "192.168.0.7";
+                    int fastApiPort = 8000;
+                    string url1 = $"ws://{fastApiIp}:{fastApiPort}/api/view/1";
+                    string url2 = $"ws://{fastApiIp}:{fastApiPort}/api/view/2";
 
-                // 3. 타이머 시작
-                _timer.Start();
+                    await _wsService1.ConnectAsync(url1);
+                    await _wsService2.ConnectAsync(url2);
 
-                // 즉시 갱신
-                Timer_Tick(null, EventArgs.Empty);
+                    _timer.Start();
+                    Timer_Tick(null, EventArgs.Empty);
+                }
+                else
+                {
+                    System.Windows.MessageBox.Show("시스템 시작 실패 (서버 응답 없음)");
+                }
             }
         }
 
+        // [수정] RESTART: API 호출 방식
         public async void RestartSimulation()
         {
-            await _mqttService.ConnectAsync();
-            await _mqttService.SendCommandAsync("RESET");
+            bool success = await _apiService.RestartSystemAsync("1");
 
-            // 재가동 시에도 FastAPI 연결 확인
-            string fastApiIp = "192.168.0.7";
-            int fastApiPort = 8000;
-            await _wsService1.ConnectAsync($"ws://{fastApiIp}:{fastApiPort}/api/source/1");
-            await _wsService2.ConnectAsync($"ws://{fastApiIp}:{fastApiPort}/api/source/2");
-
-            CurrentComplete = 0;
-            DefectCount = 0;
-            DefectRate = 0;
-
-            if (!_timer.IsEnabled)
+            if (success)
             {
-                _timer.Start();
-                Timer_Tick(null, EventArgs.Empty);
+                string fastApiIp = "192.168.0.7";
+                int fastApiPort = 8000;
+                await _wsService1.ConnectAsync($"ws://{fastApiIp}:{fastApiPort}/api/view/1");
+                await _wsService2.ConnectAsync($"ws://{fastApiIp}:{fastApiPort}/api/view/2");
+
+                CurrentComplete = 0;
+                DefectCount = 0;
+                DefectRate = 0;
+
+                if (!_timer.IsEnabled)
+                {
+                    _timer.Start();
+                    Timer_Tick(null, EventArgs.Empty);
+                }
             }
         }
 
+        // [수정] STOP: API 호출 방식
         public async void StopSimulation()
         {
             if (_timer.IsEnabled)
             {
-                await _mqttService.SendCommandAsync("STOP");
+                await _apiService.StopSystemAsync("1");
+                await _apiService.ControlCctvAsync("0"); // CCTV 끄기
+
                 await _wsService1.DisconnectAsync();
                 await _wsService2.DisconnectAsync();
                 _timer.Stop();
@@ -241,53 +256,14 @@ namespace AMPManager.ViewModel
 
         private async void Timer_Tick(object? sender, EventArgs e)
         {
-            // [테스트용] 더미 데이터 (실제 장비 연결 시 삭제)
-            if (true)
+            // 실시간 상태 갱신 (선택사항: /api/status 혹은 계산된 값 사용)
+            var status = await _apiService.GetStatusAsync();
+            if (status != null)
             {
-                bool isBad = new Random().Next(0, 10) < 2;
-                int randomPid = new Random().Next(1, 4);
-                string nowTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-
-                byte[]? img1Data = ImageToByte(CameraImage1);
-                byte[]? img2Data = ImageToByte(CameraImage2);
-
-                _dbManager.InsertMeasurement(randomPid, nowTime, isBad, img1Data, img2Data);
-
-                CurrentComplete++;
-                if (isBad) DefectCount++;
-                if (CurrentComplete > 0) DefectRate = (double)DefectCount / CurrentComplete * 100.0;
+                // 서버와 수량 동기화가 필요하다면 여기서 갱신
+                // AllocationCount = status.AllocationCount;
             }
             UpdateChartData();
-        }
-
-        private async void InitializeCamerasAsync() { await Task.Run(() => { try { _capture1 = new VideoCapture(0, VideoCaptureAPIs.DSHOW); _capture2 = new VideoCapture(1, VideoCaptureAPIs.DSHOW); } catch { } }); }
-
-        private async void RunCameraLoop(VideoCapture? capture, Func<ImageSource?> getImage, Action<ImageSource?> updateImage)
-        {
-            if (capture == null || !capture.IsOpened()) return;
-            await Task.Run(() =>
-            {
-                using var frame = new Mat();
-                while (_isCameraRunning)
-                {
-                    try
-                    {
-                        capture.Read(frame);
-                        if (!frame.Empty())
-                        {
-                            System.Windows.Application.Current.Dispatcher.Invoke(() =>
-                            {
-                                var wb = getImage() as WriteableBitmap;
-                                if (wb == null || wb.PixelWidth != frame.Width || wb.PixelHeight != frame.Height) updateImage(frame.ToWriteableBitmap());
-                                else WriteableBitmapConverter.ToWriteableBitmap(frame, wb);
-                            });
-                        }
-                    }
-                    catch { }
-                    System.Threading.Thread.Sleep(33);
-                }
-            });
-            System.Windows.Application.Current.Dispatcher.Invoke(() => updateImage(null));
         }
     }
 }
