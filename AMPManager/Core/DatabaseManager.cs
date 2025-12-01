@@ -10,9 +10,58 @@ namespace AMPManager.Core
     {
         private const string ConnectionString = "Data Source=factory.db;Version=3;";
 
+
+        public User? Login(string id, string pw)
+        {
+            // === [현재: 하드코딩 모드] ===
+            // 테스트를 위해 고정된 아이디/비번을 사용합니다.
+            if (id == "admin" && pw == "1234")
+            {
+                return new User("김관리", "admin", 1); // 1 = 관리자
+            }
+
+            if (id == "worker" && pw == "1234")
+            {
+                return new User("이작업", "worker", 2); // 2 = 일반 작업자
+            }
+
+            // === [나중에 DB 연결 시 사용할 코드] ===
+            /*
+            if (!File.Exists("factory.db")) return null;
+            try
+            {
+                using (SQLiteConnection conn = new SQLiteConnection(ConnectionString))
+                {
+                    conn.Open();
+                    string query = "SELECT * FROM USER WHERE id = @id AND pw = @pw";
+                    using (SQLiteCommand cmd = new SQLiteCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@id", id);
+                        cmd.Parameters.AddWithValue("@pw", pw);
+                        using (SQLiteDataReader reader = cmd.ExecuteReader())
+                        {
+                            if (reader.Read())
+                            {
+                                return new User(
+                                    reader["name"].ToString(),
+                                    reader["id"].ToString(),
+                                    Convert.ToInt32(reader["role_id"])
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+            catch {}
+            */
+
+            return null; // 로그인 실패
+        }
+
         public DatabaseManager()
         {
             EnsureTableStructure();
+
         }
 
         private void EnsureTableStructure()

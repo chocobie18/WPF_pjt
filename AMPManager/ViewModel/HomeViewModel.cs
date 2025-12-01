@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
-using System.Windows.Input; // [필수] ICommand 사용을 위해 추가
+using System.Windows.Input;
 using AMPManager.Core;
 using AMPManager.Model;
 using Newtonsoft.Json;
@@ -24,21 +24,21 @@ namespace AMPManager.ViewModel
         private DatabaseManager _dbManager = new DatabaseManager();
         private MqttService _mqttService = new MqttService();
 
-        // 웹소켓 영상 서비스 (카메라 2대용)
         private WebSocketImageService _wsService1 = new WebSocketImageService();
         private WebSocketImageService _wsService2 = new WebSocketImageService();
 
-        // --- 통합 그래프 모델 ---
+        private bool _isCameraRunning = false;
+
         public PlotModel CombinedChartModel { get; private set; }
 
-        // --- 카메라 객체 ---
+        private VideoCapture? _capture1;
+        private VideoCapture? _capture2;
         private ImageSource? _cameraImage1;
         private ImageSource? _cameraImage2;
 
         public ImageSource? CameraImage1 { get => _cameraImage1; set => SetProperty(ref _cameraImage1, value); }
         public ImageSource? CameraImage2 { get => _cameraImage2; set => SetProperty(ref _cameraImage2, value); }
 
-        // --- 데이터 ---
         private int _allocationCount = 1000;
         private int _currentComplete = 0;
         private double _defectRate = 0;
@@ -49,51 +49,37 @@ namespace AMPManager.ViewModel
         public int CurrentComplete { get => _currentComplete; set => SetProperty(ref _currentComplete, value); }
         public double DefectRate { get => _defectRate; set => SetProperty(ref _defectRate, value); }
 
-        // [추가] 테스트 버튼 명령어
         public ICommand TestCommand { get; }
 
         public HomeViewModel()
         {
-            // 1. 차트 초기화
             InitializeCombinedChart();
 
-            // 2. 타이머 설정
             _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
             _timer.Tick += Timer_Tick;
 
-            // MQTT 수신 연결
+            InitializeCamerasAsync();
+
             _mqttService.MessageReceived += OnMqttDataReceived;
 
-            // 웹소켓 영상 수신 연결
             _wsService1.OnImageReceived += HandleImage1;
             _wsService2.OnImageReceived += HandleImage2;
 
-            // [추가] 테스트 버튼 명령 구현
             TestCommand = new RelayCommand(async o =>
             {
-                // 연결이 안 되어 있다면 연결 시도
                 await _mqttService.ConnectAsync();
-                // 테스트 신호 "1" 전송 (MqttService에 추가한 함수 호출)
                 await _mqttService.SendTestSignal();
             });
         }
 
-        // CAM 1 처리 함수
         private void HandleImage1(byte[] data)
         {
-            System.Windows.Application.Current.Dispatcher.Invoke(() =>
-            {
-                CameraImage1 = ByteToBitmapImage(data);
-            });
+            System.Windows.Application.Current.Dispatcher.Invoke(() => CameraImage1 = ByteToBitmapImage(data));
         }
 
-        // CAM 2 처리 함수
         private void HandleImage2(byte[] data)
         {
-            System.Windows.Application.Current.Dispatcher.Invoke(() =>
-            {
-                CameraImage2 = ByteToBitmapImage(data);
-            });
+            System.Windows.Application.Current.Dispatcher.Invoke(() => CameraImage2 = ByteToBitmapImage(data));
         }
 
         private BitmapImage? ByteToBitmapImage(byte[] data)
@@ -115,7 +101,6 @@ namespace AMPManager.ViewModel
             catch { return null; }
         }
 
-        // DB 저장용 이미지 변환
         private byte[]? ImageToByte(ImageSource? img)
         {
             if (img is WriteableBitmap wb)
@@ -181,7 +166,7 @@ namespace AMPManager.ViewModel
                     bool isDefect = (resultStr == "NG");
                     string nowTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
 
-                    byte[]? img1Data = ImageToByte(CameraImage1); // (로컬캡처용)
+                    byte[]? img1Data = ImageToByte(CameraImage1);
                     byte[]? img2Data = ImageToByte(CameraImage2);
 
                     _dbManager.InsertMeasurement(pid, nowTime, isDefect, img1Data, img2Data);
@@ -194,37 +179,45 @@ namespace AMPManager.ViewModel
             });
         }
 
-        // [수정] StartSimulation -> StartSystem으로 함수명 변경 및 명령 변경 (WPF의 [시스템 시작] 버튼)
-        public async void StartSystem()
+        // [수정] 시작 시 즉시 갱신
+        public async void StartSimulation()
         {
             if (!_timer.IsEnabled)
             {
-                await _mqttService.ConnectAsync();
+                //await _mqttService.ConnectAsync();
+                //await _mqttService.SendCommandAsync("START");
 
-                // ★ MQTT 명령을 "RESET"으로 변경: 아두이노의 재가동 로직을 호출
-                await _mqttService.SendCommandAsync("RESET");
-
-                // 메인 PC IP 주소 (본인 환경에 맞게 수정 필요)
-                string mainPcIp = "192.168.0.88";
-                await _wsService1.ConnectAsync($"ws://{mainPcIp}:8765");
-                await _wsService2.ConnectAsync($"ws://{mainPcIp}:8766");
+                //string mainPcIp = "192.168.0.88";
+                //await _wsService1.ConnectAsync($"ws://{mainPcIp}:8765");
+                //await _wsService2.ConnectAsync($"ws://{mainPcIp}:8766");
 
                 _timer.Start();
+
+                // [추가] 기다리지 않고 바로 한 번 실행!
+                Timer_Tick(null, EventArgs.Empty);
             }
         }
 
-        // [추가] 시스템 재가동 (WPF의 [재가동] 버튼)
-        public async void RestartSystem()
+        // [수정] 재가동 시 즉시 갱신
+        public async void RestartSimulation()
         {
-            // 시스템이 정지 상태(타이머 비활성화)면 StartSystem을 호출하여 전체 재시작합니다.
+            await _mqttService.ConnectAsync();
+            await _mqttService.SendCommandAsync("RESET");
+
+            string mainPcIp = "192.168.0.88";
+            await _wsService1.ConnectAsync($"ws://{mainPcIp}:8765");
+            await _wsService2.ConnectAsync($"ws://{mainPcIp}:8766");
+
+            // 데이터 초기화
+            CurrentComplete = 0;
+            DefectCount = 0;
+            DefectRate = 0;
+
             if (!_timer.IsEnabled)
             {
-                StartSystem();
-            }
-            // 시스템이 이미 실행 중일 경우, 하드웨어에 RESET 명령만 다시 보내 재가동을 요청합니다.
-            else
-            {
-                await _mqttService.SendCommandAsync("RESET");
+                _timer.Start();
+                // [추가] 즉시 실행
+                Timer_Tick(null, EventArgs.Empty);
             }
         }
 
@@ -241,21 +234,52 @@ namespace AMPManager.ViewModel
 
         private async void Timer_Tick(object? sender, EventArgs e)
         {
-            // [테스트용 더미 데이터]
-            if (true)
+            if (true) // 테스트 더미 데이터
             {
                 bool isBad = new Random().Next(0, 10) < 2;
                 int randomPid = new Random().Next(1, 4);
                 string nowTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
 
-                _dbManager.InsertMeasurement(randomPid, nowTime, isBad, null, null);
+                byte[]? img1Data = ImageToByte(CameraImage1);
+                byte[]? img2Data = ImageToByte(CameraImage2);
+
+                _dbManager.InsertMeasurement(randomPid, nowTime, isBad, img1Data, img2Data);
 
                 CurrentComplete++;
                 if (isBad) DefectCount++;
                 if (CurrentComplete > 0) DefectRate = (double)DefectCount / CurrentComplete * 100.0;
             }
-
             UpdateChartData();
+        }
+
+        private async void InitializeCamerasAsync() { await Task.Run(() => { try { _capture1 = new VideoCapture(0, VideoCaptureAPIs.DSHOW); _capture2 = new VideoCapture(1, VideoCaptureAPIs.DSHOW); } catch { } }); }
+
+        private async void RunCameraLoop(VideoCapture? capture, Func<ImageSource?> getImage, Action<ImageSource?> updateImage)
+        {
+            if (capture == null || !capture.IsOpened()) return;
+            await Task.Run(() =>
+            {
+                using var frame = new Mat();
+                while (_isCameraRunning)
+                {
+                    try
+                    {
+                        capture.Read(frame);
+                        if (!frame.Empty())
+                        {
+                            System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                            {
+                                var wb = getImage() as WriteableBitmap;
+                                if (wb == null || wb.PixelWidth != frame.Width || wb.PixelHeight != frame.Height) updateImage(frame.ToWriteableBitmap());
+                                else WriteableBitmapConverter.ToWriteableBitmap(frame, wb);
+                            });
+                        }
+                    }
+                    catch { }
+                    System.Threading.Thread.Sleep(33);
+                }
+            });
+            System.Windows.Application.Current.Dispatcher.Invoke(() => updateImage(null));
         }
     }
 }
