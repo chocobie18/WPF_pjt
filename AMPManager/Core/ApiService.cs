@@ -13,7 +13,7 @@ namespace AMPManager.Core
         private readonly HttpClient _client;
 
         // ★ 서버 IP 주소가 맞는지 다시 확인해주세요! (http:// 포함)
-        private const string BaseUrl = "http://192.168.0.62:5000";
+        private const string BaseUrl = "http://192.168.0.7:8000";
 
         public ApiService()
         {

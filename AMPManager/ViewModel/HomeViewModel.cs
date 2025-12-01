@@ -24,6 +24,7 @@ namespace AMPManager.ViewModel
         private DatabaseManager _dbManager = new DatabaseManager();
         private MqttService _mqttService = new MqttService();
 
+        // 웹소켓 서비스 (카메라 2대용)
         private WebSocketImageService _wsService1 = new WebSocketImageService();
         private WebSocketImageService _wsService2 = new WebSocketImageService();
 
@@ -58,6 +59,7 @@ namespace AMPManager.ViewModel
             _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
             _timer.Tick += Timer_Tick;
 
+            // 로컬 카메라는 사용 안 함
             InitializeCamerasAsync();
 
             _mqttService.MessageReceived += OnMqttDataReceived;
@@ -179,36 +181,42 @@ namespace AMPManager.ViewModel
             });
         }
 
-        // [수정] 시작 시 즉시 갱신
+        // [수정] FastAPI 서버 연결 로직 적용
         public async void StartSimulation()
         {
             if (!_timer.IsEnabled)
             {
-                //await _mqttService.ConnectAsync();
-                //await _mqttService.SendCommandAsync("START");
+                // 1. MQTT 연결 (브로커 주소는 MqttService.cs 설정을 따름)
+                await _mqttService.ConnectAsync();
+                await _mqttService.SendCommandAsync("START");
 
-                //string mainPcIp = "192.168.0.88";
-                //await _wsService1.ConnectAsync($"ws://{mainPcIp}:8765");
-                //await _wsService2.ConnectAsync($"ws://{mainPcIp}:8766");
+                // 2. [수정] FastAPI 웹소켓 영상 연결
+                string fastApiIp = "192.168.0.7";
+                int fastApiPort = 8000;
 
+                // FastAPI 경로에 맞춰서 연결
+                await _wsService1.ConnectAsync($"ws://{fastApiIp}:{fastApiPort}/api/source/1");
+                await _wsService2.ConnectAsync($"ws://{fastApiIp}:{fastApiPort}/api/source/2");
+
+                // 3. 타이머 시작
                 _timer.Start();
 
-                // [추가] 기다리지 않고 바로 한 번 실행!
+                // 즉시 갱신
                 Timer_Tick(null, EventArgs.Empty);
             }
         }
 
-        // [수정] 재가동 시 즉시 갱신
         public async void RestartSimulation()
         {
             await _mqttService.ConnectAsync();
             await _mqttService.SendCommandAsync("RESET");
 
-            string mainPcIp = "192.168.0.88";
-            await _wsService1.ConnectAsync($"ws://{mainPcIp}:8765");
-            await _wsService2.ConnectAsync($"ws://{mainPcIp}:8766");
+            // 재가동 시에도 FastAPI 연결 확인
+            string fastApiIp = "192.168.0.7";
+            int fastApiPort = 8000;
+            await _wsService1.ConnectAsync($"ws://{fastApiIp}:{fastApiPort}/api/source/1");
+            await _wsService2.ConnectAsync($"ws://{fastApiIp}:{fastApiPort}/api/source/2");
 
-            // 데이터 초기화
             CurrentComplete = 0;
             DefectCount = 0;
             DefectRate = 0;
@@ -216,7 +224,6 @@ namespace AMPManager.ViewModel
             if (!_timer.IsEnabled)
             {
                 _timer.Start();
-                // [추가] 즉시 실행
                 Timer_Tick(null, EventArgs.Empty);
             }
         }
@@ -234,7 +241,8 @@ namespace AMPManager.ViewModel
 
         private async void Timer_Tick(object? sender, EventArgs e)
         {
-            if (true) // 테스트 더미 데이터
+            // [테스트용] 더미 데이터 (실제 장비 연결 시 삭제)
+            if (true)
             {
                 bool isBad = new Random().Next(0, 10) < 2;
                 int randomPid = new Random().Next(1, 4);
