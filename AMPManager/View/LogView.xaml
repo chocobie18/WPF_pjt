@@ -11,18 +11,13 @@
 
         <Border Grid.Row="0" Style="{StaticResource PanelStyle}" Margin="0,0,0,15" Padding="15">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-
                 <TextBlock Text="날짜" VerticalAlignment="Center" Foreground="{StaticResource SecondaryText}" Margin="0,0,10,0"/>
                 <TextBox Text="{Binding SearchDate}" Width="120" Height="30" VerticalContentAlignment="Center" Padding="5" Background="#404050" Foreground="White" BorderThickness="0"/>
 
-                <CheckBox Content="정상" IsChecked="{Binding IsCheckedNormal}" 
-                          Foreground="{StaticResource PrimaryText}" VerticalAlignment="Center" Margin="30,0,10,0"
-                          Style="{StaticResource {x:Type CheckBox}}"/>
-                <CheckBox Content="불량" IsChecked="{Binding IsCheckedDefect}" 
-                          Foreground="#FF5252" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                <CheckBox Content="정상" IsChecked="{Binding IsCheckedNormal}" Foreground="{StaticResource PrimaryText}" VerticalAlignment="Center" Margin="30,0,10,0" Style="{StaticResource {x:Type CheckBox}}"/>
+                <CheckBox Content="불량" IsChecked="{Binding IsCheckedDefect}" Foreground="#FF5252" VerticalAlignment="Center" Margin="10,0,0,0"/>
 
-                <Button Content="조회" Command="{Binding SearchCommand}" Width="80" Height="30" Margin="30,0,0,0" 
-                        Background="{StaticResource AccentColor}" Foreground="White" FontWeight="Bold" BorderThickness="0">
+                <Button Content="조회" Command="{Binding SearchCommand}" Width="80" Height="30" Margin="30,0,0,0" Background="{StaticResource AccentColor}" Foreground="White" FontWeight="Bold" BorderThickness="0">
                     <Button.Resources>
                         <Style TargetType="Border">
                             <Setter Property="CornerRadius" Value="4"/>
@@ -52,14 +47,9 @@
                     <TextBlock Grid.Column="2" Text="판정" FontWeight="Bold" Foreground="{StaticResource SecondaryText}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     <TextBlock Grid.Column="3" Text="상세" FontWeight="Bold" Foreground="{StaticResource SecondaryText}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Grid>
-
                 <Separator Grid.Row="1" Background="#4A4A5A" Margin="0,0,0,5"/>
 
-                <DataGrid Grid.Row="2" ItemsSource="{Binding LogData}" 
-                          AutoGenerateColumns="False" HeadersVisibility="None" Background="Transparent" 
-                          BorderThickness="0" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#404050"
-                          RowBackground="Transparent" RowHeight="45" SelectionMode="Single" IsReadOnly="True">
-
+                <DataGrid Grid.Row="2" ItemsSource="{Binding LogData}" AutoGenerateColumns="False" HeadersVisibility="None" Background="Transparent" BorderThickness="0" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#404050" RowBackground="Transparent" RowHeight="45" SelectionMode="Single" IsReadOnly="True">
                     <DataGrid.Columns>
                         <DataGridTextColumn Binding="{Binding Timestamp}" Width="2*" Foreground="{StaticResource PrimaryText}"/>
                         <DataGridTextColumn Binding="{Binding PropertyName}" Width="2*" Foreground="{StaticResource SecondaryText}"/>
@@ -83,10 +73,7 @@
                         <DataGridTemplateColumn Width="1*">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <Button Content="보기" 
-                                            Command="{Binding DataContext.OpenDetailCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" 
-                                            CommandParameter="{Binding}"
-                                            Width="50" Height="26" Background="#3A3A4A" Foreground="White" BorderThickness="0">
+                                    <Button Content="보기" Command="{Binding DataContext.OpenDetailCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}" Width="50" Height="26" Background="#3A3A4A" Foreground="White" BorderThickness="0">
                                         <Button.Resources>
                                             <Style TargetType="Border">
                                                 <Setter Property="CornerRadius" Value="4"/>
@@ -96,7 +83,6 @@
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
-
                     </DataGrid.Columns>
                 </DataGrid>
             </Grid>
